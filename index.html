@@ -1288,9 +1288,8 @@
 
         formData['accidentType'] = document.getElementById('accidentType').value;
         formData['advanceGivenYesNo'] = document.getElementById('advanceGivenYesNo').value;
-        
-        const googleScriptUrl = "https://script.google.com/macros/s/AKfycbz-xB7d2Jwn2yzHbf6VD-7wSo-mLqU3etfb_taOzj4zlF8_37UB9nnWaON72fUgMoPR/exec";
-        fetch(googleScriptUrl, {
+    const googleScriptUrl = "https://script.google.com/macros/s/AKfycbz-xB7d2Jwn2yzHbf6VD-7wSo-mLqU3etfb_taOzj4zlF8_37UB9nnWaON72fUgMoPR/exec";
+      fetch(googleScriptUrl, {
             method: "POST",
             mode: "no-cors",
             headers: { "Content-Type": "application/json" },
