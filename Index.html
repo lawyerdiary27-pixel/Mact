@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1e3a8a">
+<title>MACT Legal Portal | Smart CRM & Drive Sync</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#1e3a8a;--primary2:#2563eb;--accent:#10b981;--warning:#f59e0b;--danger:#ef4444;--bg:#f8fafc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#e2e8f0;--radius:12px;--shadow:0 10px 25px -5px rgba(0,0,0,.06)}
+*{box-sizing:border-box}body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);margin:0;padding:18px;line-height:1.5}.container{max-width:1450px;margin:auto;background:var(--card);padding:24px;border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border)}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:linear-gradient(135deg,#f1f5f9,#e2e8f0);padding:14px;border:1px solid var(--border);border-radius:12px}.brand{font-weight:700;color:var(--primary);font-size:16px}.actions{display:flex;gap:8px;flex-wrap:wrap}button,.btn{font-family:inherit;border:0;border-radius:8px;padding:9px 13px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;text-decoration:none}.primary{background:var(--primary);color:#fff}.accent{background:var(--accent);color:#fff}.warning{background:var(--warning);color:#fff}.danger{background:var(--danger);color:#fff}.secondary{background:#64748b;color:#fff}.google{background:#2563eb;color:#fff}.dark{background:#334155;color:#fff}.btn:hover{filter:brightness(.96);transform:translateY(-1px)}
+.statusbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:12px 2px 18px;font-size:12px;color:var(--muted)}.status-left{display:flex;align-items:center;gap:8px}.dot{width:9px;height:9px;border-radius:50%;background:#94a3b8}.dot.ok{background:#10b981}.dot.warn{background:#f59e0b}.dot.err{background:#ef4444}
+.dashboard{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}.stat{border:1px solid var(--border);border-radius:10px;padding:13px;background:#fff}.stat b{display:block;font-size:22px;color:var(--primary)}.stat span{font-size:11px;color:var(--muted)}
+.alert{background:#fffbeb;border:1px solid #fde68a;color:#92400e;padding:15px;border-radius:12px;margin-bottom:20px}.alert h4{margin:0 0 8px;color:#b45309}
+.section-title{background:#f1f5f9;color:var(--primary);padding:11px 14px;margin:20px 0 12px;font-weight:700;font-size:13px;border-left:4px solid var(--primary);border-radius:7px;cursor:pointer;display:flex;justify-content:space-between}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}.group{display:flex;flex-direction:column}label{font-weight:700;margin-bottom:5px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}input,select,textarea{padding:10px 12px;border:1px solid var(--border);border-radius:8px;font:inherit;font-size:13px;background:#fff;color:var(--text);width:100%}input:focus,select:focus,textarea:focus{outline:none;border-color:var(--primary2);box-shadow:0 0 0 3px rgba(37,99,235,.1)}.collapsed{display:none!important}
+.table-wrap{overflow:auto;max-height:530px;border:1px solid var(--border);border-radius:12px;margin-top:12px}table{width:100%;border-collapse:separate;border-spacing:0;min-width:950px}th,td{padding:11px 12px;border-bottom:1px solid var(--border);font-size:12px;text-align:left;vertical-align:top}th{background:var(--primary);color:#fff;position:sticky;top:0;z-index:2;font-size:10px;text-transform:uppercase}tr:hover td{background:#f8fafc}.click{color:var(--primary);font-weight:700;cursor:pointer}.proc{background:#fafaf9;border:1px dashed var(--primary);padding:14px;border-radius:10px;margin:10px 0}.modal{display:none;position:fixed;inset:0;background:rgba(15,23,42,.62);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center;padding:12px}.modalbox{background:#fff;width:96%;max-width:1100px;max-height:94vh;overflow:auto;border-radius:14px;padding:22px;box-shadow:0 25px 50px -12px rgba(0,0,0,.25)}.close{float:right;background:var(--danger);color:#fff;border:0;border-radius:7px;padding:6px 10px;cursor:pointer}.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.search{min-width:250px}.small{font-size:11px;color:var(--muted)}.chips{display:flex;gap:5px;flex-wrap:wrap}.chip{background:#eff6ff;color:#1d4ed8;padding:4px 7px;border-radius:999px;font-size:10px;font-weight:700}.empty{padding:25px;text-align:center;color:var(--muted)}.sync-settings{display:none}.hidden{display:none!important}
+@media(max-width:900px){body{padding:8px}.container{padding:12px}.dashboard{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.top{align-items:flex-start}.actions button,.actions label{flex:1;justify-content:center}.search{min-width:100%;width:100%}.modalbox{padding:14px}}
+@media print{body{padding:0;background:#fff}.container{box-shadow:none;border:0;max-width:none}.top,.statusbar,form,.toolbar button,.toolbar input,.alert button,.modal,.record-checkbox,#selectAll,.no-print{display:none!important}.table-wrap{max-height:none;overflow:visible;border:1px solid #000}table{min-width:0}th,td{border:1px solid #000;color:#000}th{background:#eee!important;color:#000!important;position:static}}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="top">
+<div class="brand">⚖️ MACT Legal Record Portal — Smart CRM</div>
+<div class="actions">
+<button class="btn accent" id="newBtn">＋ Add New File</button>
+<button class="btn google" id="loginBtn">☁️ Connect Google Drive</button>
+<button class="btn dark" id="syncBtn">🔄 Sync Now</button>
+<button class="btn secondary" id="logoutBtn">Sign Out</button>
+<button class="btn warning" id="exportBtn">CSV Export</button>
+<label class="btn warning">CSV Import<input id="importInput" type="file" accept=".csv" hidden></label>
+<button class="btn secondary" id="addDateBtn">＋ Hearing Date</button>
+</div>
+</div>
+<div class="statusbar">
+<div class="status-left"><span id="statusDot" class="dot"></span><span id="cloudStatus">Offline — Local Storage Active</span></div>
+<div class="toolbar"><span id="lastSync">Last sync: Never</span><span>•</span><span id="recordCount">0 records</span><span>•</span><span id="accountLabel">No Google account</span></div>
+</div>
+
+<div class="dashboard">
+<div class="stat"><b id="totalStat">0</b><span>Total Cases</span></div>
+<div class="stat"><b id="activeStat">0</b><span>Active / Pending</span></div>
+<div class="stat"><b id="disposedStat">0</b><span>Disposed / Awarded</span></div>
+<div class="stat"><b id="todayStat">0</b><span>Today's Hearings</span></div>
+<div class="stat"><b id="upcomingStat">0</b><span>Next 7 Days</span></div>
+</div>
+
+<div class="alert">
+<h4>🔔 Smart Hearing Alerts <button class="btn dark no-print" id="printToday" style="float:right;padding:6px 9px">Print Today</button></h4>
+<div id="hearingAlerts">Checking hearings…</div>
+</div>
+
+<div class="toolbar" style="justify-content:space-between">
+<div class="toolbar"><h3 style="margin:0;color:var(--primary)">Saved Records</h3><button class="btn danger" id="bulkDelete" hidden>Delete Selected (<span id="selCount">0</span>)</button><button class="btn warning" id="bulkEdit" hidden>Bulk Edit</button></div>
+<div class="toolbar"><input class="search" id="search" placeholder="🔎 Search File, Case, claimant, vehicle, insurance, court..."><button class="btn dark" id="printRecords">🖨 Print View</button></div>
+</div>
+<div class="table-wrap"><table><thead><tr><th><input type="checkbox" id="selectAll"></th><th>File No</th><th>Case No</th><th>Court</th><th>Case Title</th><th>Claimant</th><th>Latest Hearing / Status</th><th>PDF</th></tr></thead><tbody id="tbody"></tbody></table></div>
+</div>
+
+<div class="modal" id="newModal"><div class="modalbox">
+<button class="close" id="closeNew">✕ Close</button><h2 id="formTitle" style="color:var(--primary)">Create New Case Record</h2>
+<form id="caseForm"><div id="formFields"></div>
+<div class="section-title">Case Proceedings / Hearing History <span>📅</span></div>
+<div id="proceedings"><div class="proc"><div class="grid"><div class="group"><label>Proceeding Date</label><input type="date" class="procDate"></div><div class="group"><label>Next Date</label><input type="date" class="nextDate"></div></div><div class="group" style="margin-top:10px"><label>Proceedings / Order Notes / Stage</label><textarea class="procNotes" rows="2"></textarea></div></div></div>
+<button type="button" class="btn secondary" id="addProc">＋ Add Proceeding</button>
+<button class="btn primary" type="submit" id="saveBtn" style="width:100%;justify-content:center;margin-top:18px">💾 Save Record & Sync</button>
+<div id="formMsg" class="small" style="text-align:center;margin-top:8px"></div>
+</form></div></div>
+
+<div class="modal" id="detailModal"><div class="modalbox"><button class="close" id="closeDetail">✕ Close</button><div id="detail"></div></div></div>
+<div class="modal" id="dateModal"><div class="modalbox" style="max-width:650px"><button class="close" id="closeDate">✕ Close</button><h3 style="color:var(--primary)">Add Hearing / Proceeding</h3><div class="group"><label>Search File / Case / Title</label><input id="dateSearch" placeholder="e.g. 904 / 532/25 / RIZWAN"></div><button class="btn secondary" id="findFile" style="margin-top:10px">Search</button><div id="dateResult"></div></div></div>
+<div class="modal" id="editProcModal"><div class="modalbox" style="max-width:600px"><button class="close" id="closeEditProc">✕ Close</button><h3 style="color:var(--primary)">Edit Proceeding</h3><input type="hidden" id="epRec"><input type="hidden" id="epIndex"><div class="grid"><div class="group"><label>Proceeding Date</label><input type="date" id="epDate"></div><div class="group"><label>Next Date</label><input type="date" id="epNext"></div></div><div class="group" style="margin-top:10px"><label>Notes</label><textarea id="epNotes" rows="4"></textarea></div><button class="btn accent" id="saveEp" style="width:100%;justify-content:center;margin-top:15px">Update</button></div></div>
+<div class="modal" id="bulkModal"><div class="modalbox" style="max-width:650px"><button class="close" id="closeBulk">✕ Close</button><h3 style="color:var(--primary)">Bulk Edit Selected Records</h3><p class="small">Blank fields are ignored. Changes are saved locally and synced.</p><div class="grid"><div class="group"><label>Court Name</label><input id="bCourt"></div><div class="group"><label>Insurance Company</label><input id="bIns"></div><div class="group"><label>District</label><input id="bDistrict"></div><div class="group"><label>Final Status</label><input id="bStatus"></div></div><button class="btn accent" id="saveBulk" style="width:100%;justify-content:center;margin-top:15px">Apply Updates</button></div></div>
+
+<script>
+/* ================= SMART MACT CRM ================= */
+const STORAGE='mact_unlimited_records';
+const META='mact_crm_meta_v2';
+const CLIENT_ID='YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+const API_KEY='YOUR_GOOGLE_API_KEY';
+const DISCOVERY='https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+const SCOPES='https://www.googleapis.com/auth/drive.file';
+const BACKUP_NAME='mact_crm_backup.json';
+
+const sections={
+'Case & Core Information':['caseTitle','mactNo','fileNumber','courtName','sections','accidentType','filingYear','filingMonth','caseGivenBy','clientFromOtherAdv','importanceLevel','presentation','accountName','accountType','accountSite','cifNumber','accountsNumbers','accountNumberDup','accountHolderName','ifscCode','bankName','bankBranchName','allClaimantsAccountDetail','hpoAccountClosed','ifscHpoIppb','hpoIppbBranchName'],
+'Claimant & Personal Details':['claimantName','fatherName','age','income','occupation','religion','village','town','tehsil','block','psAccident','district','otherDistricts','state','email','mobile','mobile2','mobile1','mobileNum2','mobile3','mobileNumGen','otherAddress','isIncomeTaxPayee'],
+'Accident, FIR & Vehicle Details':['accidentDate','crimeNo','firOrGd','gd','fir','fr','vehicleNo','vehicleType','ownerName','insuranceCo','insuranceDetails','driverName','ioDetails','otherInvestigatorsDetail','investigatorName'],
+'Legal Advocates & Representation':['claimantCouncil','ownerAdvocate','driverAdvocate','insuranceAdvocate','hcAdvocateName','ourSideRepresentation','executives'],
+'Documents, Medical & Disability Status':['photoCopyStatus','fileStatusComplete','certifiedCopiesStatus','regCertificate','drivingLicense','permit','fitness','insuranceDoc','pollution','bailOrder','releaseOrder','chargeSheet','injuryReport','punchnama','postMortem','sitePlan','disabilityPercentage','disabilityNature','disabilityCertificate','disabilityCertNoDob','disabilityValidityFrom','disabilityValidityTill','medicalBillsExpenses','verifiedMedicalBills'],
+'Filing, Claims & Proceedings Progress':['issueFramedDate','kbFilingDate','protestFilingDate','lowerCourtProtest','isProtestPending','miscNoProtest','nextDateProtest','rplyFilingDate','rplyNotes','paFilingDate','licInsFilingDate','bankClaimFilingDate','esFilingDate','atmClaimFilingDate','labourCardFilingDate','compromiseFilingDate','compromiseStatus','suggestLokAdalat','lokAdalatDocStatus','lokAdalatDocsReq','atmClaim','bankClaim','eShram','licInsurance','paOwnerDriver','labourCard','kisanBima','advanceGivenYesNo','advanceGivenDetails','compensationAmount','monthCompromise','yearCompromise','dateJudgementCompromise','bankCompromiseReceived','ddRestoredDate','judgementStatus','finalStatus','hcAppealStatus','fafoNumber','hcAppealBrief','appealCaveatDate','enrichStatus','connectedToModule','connectedToId','lastActivityTime','lastEnrichedTime','changeLogTime','locked','description','othersNotes']
+};
+const allFieldIds=Object.values(sections).flat();
+const dateFields=new Set(['accidentDate','disabilityValidityFrom','disabilityValidityTill','issueFramedDate','kbFilingDate','protestFilingDate','nextDateProtest','rplyFilingDate','paFilingDate','licInsFilingDate','bankClaimFilingDate','esFilingDate','atmClaimFilingDate','labourCardFilingDate','compromiseFilingDate','dateJudgementCompromise','ddRestoredDate','appealCaveatDate']);
+const textAreas=new Set(['allClaimantsAccountDetail','otherAddress','insuranceDetails','otherInvestigatorsDetail','rplyNotes','lokAdalatDocsReq','advanceGivenDetails','hcAppealBrief','description','othersNotes']);
+const required=new Set(['caseTitle','mactNo','claimantName']);
+const defaults={courtName:'PO MACT',sections:'166 MV ACT',accidentType:'INJURY',district:'Bareilly',state:'Uttar Pradesh',vehicleType:'Motor Cycle',advanceGivenYesNo:'NO'};
+const labelMap={mactNo:'MACP / Case No',claimantName:'Injured / Deceased Name',fatherName:"Father's / Husband Name",insuranceCo:'Insurance Company',vehicleNo:'Vehicle Number',vehicleType:"Vehicle's Type",courtName:'Court Name',finalStatus:'FINAL STATUS',judgementStatus:'Judgement Status',mactNo:'MACP / Case No',ioDetails:'Investigation Officer (I.O) Name & Mobile'};
+const selects={accidentType:['INJURY','DEATH'],advanceGivenYesNo:['NO','YES']};
+
+let records=[], editingId=null, accessToken=null, backupFileId=null, tokenClient=null, gapiReady=false, gisReady=false, syncTimer=null, syncing=false;
+
+const $=id=>document.getElementById(id);
+function safeParse(v,f=[]){try{return JSON.parse(v)||f}catch{return f}}
+function getRecords(){return safeParse(localStorage.getItem(STORAGE),[])}
+function setRecords(v){localStorage.setItem(STORAGE,JSON.stringify(v));records=v}
+function now(){return new Date().toISOString()}
+function localDate(d=new Date()){const x=new Date(d.getTime()-d.getTimezoneOffset()*60000);return x.toISOString().slice(0,10)}
+function uid(){return crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2)}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function pretty(id){return labelMap[id]||id.replace(/([A-Z])/g,' $1').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase())}
+function meta(){return safeParse(localStorage.getItem(META),{})}
+function saveMeta(x){localStorage.setItem(META,JSON.stringify(x))}
+function touch(r){r.updatedAt=now();if(!r.createdAt)r.createdAt=r.updatedAt;if(!r.id)r.id=uid();return r}
+
+function buildForm(){
+ let html='';
+ Object.entries(sections).forEach(([title,ids],si)=>{
+   html+=`<div class="section-title" data-toggle="${si}"><span>${si+1}. ${esc(title)}</span><span>Hide ➖</span></div><div class="grid" id="sec${si}">`;
+   ids.forEach(id=>{
+     const type=dateFields.has(id)?'date':(id==='age'?'number':(id==='email'?'email':'text'));
+     const req=required.has(id)?' required':'';
+     if(selects[id]) html+=`<div class="group"><label>${esc(pretty(id))}${req?' *':''}</label><select id="${id}"${req}><option value="">Select…</option>${selects[id].map(x=>`<option>${x}</option>`).join('')}</select></div>`;
+     else if(textAreas.has(id)) html+=`<div class="group"><label>${esc(pretty(id))}</label><textarea id="${id}" rows="2"></textarea></div>`;
+     else html+=`<div class="group"><label>${esc(pretty(id))}${req?' *':''}</label><input type="${type}" id="${id}" list="${id}List"${req}><datalist id="${id}List"></datalist></div>`;
+   });
+   html+='</div>';
+ });
+ $('formFields').innerHTML=html;
+ document.querySelectorAll('[data-toggle]').forEach(h=>h.onclick=()=>{const g=$('sec'+h.dataset.toggle);g.classList.toggle('collapsed');h.lastElementChild.textContent=g.classList.contains('collapsed')?'Show ➕':'Hide ➖'});
+}
+function resetForm(){
+ $('caseForm').reset();editingId=null;$('formTitle').textContent='Create New Case Record';
+ Object.entries(defaults).forEach(([k,v])=>{if($(k))$(k).value=v});
+ $('proceedings').innerHTML=procTemplate();
+ $('formMsg').textContent='';
+}
+function procTemplate(){return `<div class="proc"><div class="grid"><div class="group"><label>Proceeding Date</label><input type="date" class="procDate"></div><div class="group"><label>Next Date</label><input type="date" class="nextDate"></div></div><div class="group" style="margin-top:10px"><label>Proceedings / Order Notes / Stage</label><textarea class="procNotes" rows="2"></textarea></div></div>`}
+function collectForm(){
+ const r={id:editingId||uid(),createdAt:now(),updatedAt:now(),judgmentPdfUrl:'',judgmentPdfName:'',proceedings:[]};
+ allFieldIds.forEach(id=>r[id]=$(id)?.value||'');
+ document.querySelectorAll('.proc').forEach(p=>{const a=p.querySelector('.procDate').value,b=p.querySelector('.nextDate').value,c=p.querySelector('.procNotes').value;if(a||b||c)r.proceedings.push({id:uid(),proceedingDate:a,nextDate:b,notes:c,updatedAt:now()})});
+ return r;
+}
+function fillForm(r){
+ editingId=r.id; $('formTitle').textContent='Edit Case Record — '+(r.fileNumber||r.mactNo||'');
+ allFieldIds.forEach(id=>{if($(id))$(id).value=r[id]??''});
+ $('proceedings').innerHTML=(r.proceedings?.length?r.proceedings:[]).map(p=>`<div class="proc"><div class="grid"><div class="group"><label>Proceeding Date</label><input type="date" class="procDate" value="${esc(p.proceedingDate)}"></div><div class="group"><label>Next Date</label><input type="date" class="nextDate" value="${esc(p.nextDate)}"></div></div><div class="group" style="margin-top:10px"><label>Proceedings / Order Notes / Stage</label><textarea class="procNotes" rows="2">${esc(p.notes)}</textarea></div><button type="button" class="btn danger removeProc">Remove</button></div>`).join('')||procTemplate();
+ document.querySelectorAll('.removeProc').forEach(b=>b.onclick=()=>b.parentElement.remove());
+ $('newModal').style.display='flex';
+}
+function latest(r){return r.proceedings?.length?r.proceedings[r.proceedings.length-1]:null}
+function hearingItems(days=7){
+ const start=localDate(), end=new Date();end.setDate(end.getDate()+days);const endStr=localDate(end),out=[];
+ records.forEach(r=>(r.proceedings||[]).forEach(p=>{if(p.nextDate&&p.nextDate>=start&&p.nextDate<=endStr)out.push({r,p})}));
+ return out.sort((a,b)=>String(a.p.nextDate).localeCompare(String(b.p.nextDate)));
+}
+function refreshDashboard(){
+ const today=localDate(), h=hearingItems(7);
+ const active=records.filter(r=>!/(disposed|dismiss|award|awarded|settled|closed|compromise)/i.test(r.finalStatus||'')).length;
+ const disposed=records.length-active;
+ const todayN=h.filter(x=>x.p.nextDate===today).length;
+ $('totalStat').textContent=records.length;$('activeStat').textContent=active;$('disposedStat').textContent=disposed;$('todayStat').textContent=todayN;$('upcomingStat').textContent=h.length;
+ $('recordCount').textContent=records.length+' records';
+ const todayList=h.filter(x=>x.p.nextDate===today),up=h.filter(x=>x.p.nextDate!==today);
+ let s='';
+ if(todayList.length)s+=`<b>${todayList.length} hearing(s) today</b><ul>${todayList.map(x=>`<li><b>File ${esc(x.r.fileNumber||'N/A')}</b> | ${esc(x.r.courtName||'N/A')} | ${esc(x.r.mactNo||'')} — ${esc(x.r.caseTitle||'')}<br><small>${esc(x.p.notes||'No notes')}</small></li>`).join('')}</ul>`;
+ else s+='<span>No hearing scheduled for today.</span>';
+ if(up.length)s+=`<div class="chips" style="margin-top:8px">${up.map(x=>`<span class="chip">${esc(x.p.nextDate)} · ${esc(x.r.fileNumber||x.r.mactNo||'Case')} · ${esc(x.r.courtName||'')}</span>`).join('')}</div>`;
+ $('hearingAlerts').innerHTML=s;
+}
+function render(){
+ records=getRecords();const q=$('search').value.trim().toLowerCase();
+ const list=q?records.filter(r=>JSON.stringify(r).toLowerCase().includes(q)):records;
+ if(!list.length){$('tbody').innerHTML='<tr><td colspan="8" class="empty">No matching records found.</td></tr>';updateBulk();refreshDashboard();return}
+ $('tbody').innerHTML=list.map(r=>{
+   const l=latest(r),info=l?`<b>${esc(l.proceedingDate||'N/A')}</b> → <b>${esc(l.nextDate||'N/A')}</b><br><small>${esc(l.notes||'')}</small>`:'No hearings logged';
+   const pdf=r.judgmentPdfUrl?`<a href="${r.judgmentPdfUrl}" target="_blank" download="${esc(r.judgmentPdfName||'Judgment.pdf')}">Download</a><br><label style="color:#2563eb;cursor:pointer">Change<input hidden type="file" accept=".pdf" data-pdf="${esc(r.id)}"></label>`:`<label class="btn warning" style="padding:5px 7px">Upload<input hidden type="file" accept=".pdf" data-pdf="${esc(r.id)}"></label>`;
+   return `<tr><td><input type="checkbox" class="record-checkbox" data-id="${esc(r.id)}"></td><td>${esc(r.fileNumber||'N/A')}</td><td>${esc(r.mactNo||'N/A')}</td><td><b>${esc(r.courtName||'N/A')}</b></td><td><span class="click" data-open="${esc(r.id)}">${esc(r.caseTitle||'Untitled')}</span></td><td>${esc(r.claimantName||'N/A')}</td><td>${info}</td><td>${pdf}</td></tr>`
+ }).join('');
+ document.querySelectorAll('[data-open]').forEach(x=>x.onclick=()=>openDetail(x.dataset.open));
+ document.querySelectorAll('[data-pdf]').forEach(x=>x.onchange=e=>uploadPdf(x.dataset.pdf,e.target.files[0]));
+ document.querySelectorAll('.record-checkbox').forEach(x=>x.onchange=updateBulk);
+ refreshDashboard();populateLists();
+}
+function updateBulk(){const n=document.querySelectorAll('.record-checkbox:checked').length;$('selCount').textContent=n;$('bulkDelete').hidden=!n;$('bulkEdit').hidden=!n}
+function openDetail(id){
+ const r=records.find(x=>x.id===id);if(!r)return;
+ let p=(r.proceedings||[]).map((x,i)=>`<div class="proc"><b>Hearing #${i+1}</b> | ${esc(x.proceedingDate||'N/A')} → ${esc(x.nextDate||'N/A')}<br>${esc(x.notes||'No notes')}<div style="margin-top:8px"><button class="btn warning" onclick="editProc('${r.id}',${i})">Edit</button> <button class="btn danger" onclick="deleteProc('${r.id}',${i})">Delete</button></div></div>`).join('')||'<p class="small">No proceedings logged.</p>';
+ let fields=allFieldIds.filter(id=>r[id]).map(id=>`<tr><td><b>${esc(pretty(id))}</b></td><td>${esc(r[id])}</td></tr>`).join('');
+ $('detail').innerHTML=`<h2 style="color:var(--primary)">File ${esc(r.fileNumber||'N/A')} | Case ${esc(r.mactNo||'N/A')}</h2><h3>${esc(r.caseTitle||'')}</h3><div class="toolbar"><button class="btn accent" onclick="editRecord('${r.id}')">✏ Edit Full Record</button><button class="btn secondary" onclick="addProceedingQuick('${r.id}')">＋ Add Hearing</button></div><h4 style="color:var(--primary)">Proceedings (${r.proceedings?.length||0})</h4>${p}<h4 style="color:var(--primary)">All Case Fields</h4><div class="table-wrap"><table><tbody>${fields}</tbody></table></div>`;
+ $('detailModal').style.display='flex';
+}
+window.editRecord=id=>{const r=records.find(x=>x.id===id);if(r){$('detailModal').style.display='none';fillForm(r)}};
+window.editProc=(id,i)=>{const r=records.find(x=>x.id===id),p=r?.proceedings?.[i];if(!p)return;$('epRec').value=id;$('epIndex').value=i;$('epDate').value=p.proceedingDate||'';$('epNext').value=p.nextDate||'';$('epNotes').value=p.notes||'';$('editProcModal').style.display='flex'};
+window.deleteProc=(id,i)=>{if(!confirm('Delete this proceeding?'))return;const rs=getRecords(),r=rs.find(x=>x.id===id);if(!r)return;r.proceedings.splice(i,1);touch(r);setRecords(rs);$('detailModal').style.display='none';render();syncNow()};
+window.addProceedingQuick=id=>{$('detailModal').style.display='none';$('dateSearch').value=id;$('findFile').click()};
+function uploadPdf(id,file){if(!file)return;if(file.size>8*1024*1024&&!confirm('This PDF is larger than 8 MB and may make browser/Drive backup heavy. Continue?'))return;const fr=new FileReader();fr.onload=()=>{const rs=getRecords(),r=rs.find(x=>x.id===id);if(!r)return;r.judgmentPdfUrl=fr.result;r.judgmentPdfName=file.name;touch(r);setRecords(rs);render();syncNow()};fr.readAsDataURL(file)}
+function populateLists(){
+ records=getRecords();allFieldIds.forEach(id=>{const dl=$(id+'List');if(!dl)return;const vals=[...new Set(records.map(r=>r[id]).filter(Boolean).map(String))].slice(-80);dl.innerHTML=vals.map(v=>`<option value="${esc(v)}">`).join('')});
+}
+async function saveRecord(r){
+ const rs=getRecords();const i=rs.findIndex(x=>x.id===r.id);if(i>=0){r.createdAt=rs[i].createdAt||r.createdAt;rs[i]=touch(r)}else rs.unshift(touch(r));setRecords(rs);render();await syncNow();
+}
+function selectedIds(){return [...document.querySelectorAll('.record-checkbox:checked')].map(x=>x.dataset.id)}
+function csvEscape(s){return '"'+String(s??'').replace(/"/g,'""')+'"'}
+function exportCsv(){
+ if(!records.length){alert('No records to export.');return}
+ const headers=[...allFieldIds,'id','createdAt','updatedAt','proceedingsJson','judgmentPdfName','judgmentPdfUrl'];
+ const lines=[headers.map(csvEscape).join(',')];
+ records.forEach(r=>lines.push(headers.map(h=>csvEscape(h==='proceedingsJson'?JSON.stringify(r.proceedings||[]):r[h]||'')).join(',')));
+ const blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mact_all_fields_backup.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function parseCSV(text){
+ const rows=[];let row=[],cell='',q=false;
+ for(let i=0;i<text.length;i++){const c=text[i],n=text[i+1];if(c==='"'&&q&&n==='"'){cell+='"';i++}else if(c==='"')q=!q;else if(c===','&&!q){row.push(cell);cell=''}else if((c==='\n'||c==='\r')&&!q){if(c==='\r'&&n==='\n')i++;row.push(cell);if(row.some(x=>x.trim()))rows.push(row);row=[];cell=''}else cell+=c}
+ if(cell||row.length){row.push(cell);rows.push(row)}return rows
+}
+async function importCsv(file){
+ const rows=parseCSV(await file.text());if(rows.length<2)return alert('Invalid CSV.');
+ const headers=rows[0],rs=getRecords();let n=0;
+ for(let i=1;i<rows.length;i++){const c=rows[i],r={id:uid(),createdAt:now(),updatedAt:now(),proceedings:[]};headers.forEach((h,j)=>{const v=c[j]||'';if(h==='proceedingsJson'){try{r.proceedings=JSON.parse(v)||[]}catch{}}else if(allFieldIds.includes(h)||['id','createdAt','updatedAt','judgmentPdfName','judgmentPdfUrl'].includes(h))r[h]=v});if(!r.id)r.id=uid();const old=rs.findIndex(x=>x.id===r.id);if(old>=0)rs[old]=touch({...rs[old],...r});else rs.unshift(r);n++}
+ setRecords(rs);render();await syncNow();alert(`Imported ${n} record(s).`)
+}
+
+function printToday(){
+ const list=hearingItems(0);const w=window.open('','_blank','width=900,height=700');if(!w)return;
+ w.document.write(`<html><head><title>Today's MACT Hearings</title><style>body{font-family:Arial;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #333;padding:8px;text-align:left}th{background:#eee}</style></head><body><h2>⚖️ Today's Hearing Dates — ${localDate()}</h2><table><tr><th>Case No</th><th>Court</th><th>Case Title</th><th>File</th><th>Notes</th></tr>${list.map(x=>`<tr><td>${esc(x.r.mactNo)}</td><td>${esc(x.r.courtName)}</td><td>${esc(x.r.caseTitle)}</td><td>${esc(x.r.fileNumber)}</td><td>${esc(x.p.notes||'')}</td></tr>`).join('')}</table>
+<script>
+(function(){
+  window.setSyncStatus = window.setSyncStatus || function(msg, state){
+    const el=document.getElementById('syncStatus');
+    if(el){ el.textContent=msg; el.dataset.state=state||''; }
+    console.log('[Drive]', msg);
+  };
+  function callServer(){
+    if(window.google && google.script && google.script.run) {
+      if(typeof window.loadFromDrive==='function') window.loadFromDrive();
+    } else {
+      setSyncStatus('Open from Apps Script Web App URL', 'error');
+    }
+  }
+  window.addEventListener('load', function(){
+    setTimeout(callServer, 500);
+    setInterval(function(){
+      if(document.visibilityState !== 'hidden' && navigator.onLine) callServer();
+    }, 60000);
+  });
+})();
+</script>
+
+</body></html>`);w.document.close();setTimeout(()=>{w.print();w.close()},400)
+}
+function printRecords(){const q=$('search').value.trim().toLowerCase(),list=q?records.filter(r=>JSON.stringify(r).toLowerCase().includes(q)):records;const w=window.open('','_blank','width=1000,height=700');if(!w)return;w.document.write(`<html><head><title>MACT Records</title><style>body{font-family:Arial;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #333;padding:7px;font-size:11px}th{background:#eee}</style></head><body><h2>⚖️ MACT Case Records</h2><table><tr><th>Case No</th><th>Court</th><th>Case Title</th><th>Claimant</th><th>Insurance</th><th>Latest / Next</th></tr>${list.map(r=>{const p=latest(r);return `<tr><td>${esc(r.mactNo)}</td><td>${esc(r.courtName)}</td><td>${esc(r.caseTitle)}</td><td>${esc(r.claimantName)}</td><td>${esc(r.insuranceCo)}</td><td>${esc(p?.proceedingDate||'')} → ${esc(p?.nextDate||'')}</td></tr>`}).join('')}</table>
+<script>
+(function(){
+  window.setSyncStatus = window.setSyncStatus || function(msg, state){
+    const el=document.getElementById('syncStatus');
+    if(el){ el.textContent=msg; el.dataset.state=state||''; }
+    console.log('[Drive]', msg);
+  };
+  function callServer(){
+    if(window.google && google.script && google.script.run) {
+      if(typeof window.loadFromDrive==='function') window.loadFromDrive();
+    } else {
+      setSyncStatus('Open from Apps Script Web App URL', 'error');
+    }
+  }
+  window.addEventListener('load', function(){
+    setTimeout(callServer, 500);
+    setInterval(function(){
+      if(document.visibilityState !== 'hidden' && navigator.onLine) callServer();
+    }, 60000);
+  });
+})();
+</script>
+
+</body></html>`);w.document.close();setTimeout(()=>{w.print();w.close()},400)}
+
+function initGoogle(){
+ if(!window.gapi||!window.google)return;
+ gapi.load('client',async()=>{try{await gapi.client.init({apiKey:API_KEY,discoveryDocs:[DISCOVERY]});gapiReady=true}catch(e){console.warn(e)}});
+ try{tokenClient=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:SCOPES,callback:async resp=>{if(resp.error){setStatus('Google sign-in failed','err');return}accessToken=resp.access_token;gapi.client.setToken({access_token:accessToken});saveMeta({...meta(),connected:true});$('accountLabel').textContent='Google Drive connected';setStatus('Connected to Google Drive — Sync Active','ok');await findOrCreateBackup();startAutoSync()}});gisReady=true}catch(e){console.warn(e)}
+}
+function setStatus(t,type=''){ $('cloudStatus').textContent=t;$('statusDot').className='dot '+type}
+function login(){
+ if(CLIENT_ID.includes('YOUR_')||API_KEY.includes('YOUR_')){alert('Google Cloud setup required first. Replace CLIENT_ID and API_KEY in the code with your Google Cloud credentials. Local CRM features work without them.');return}
+ if(!tokenClient){alert('Google services are still loading. Please wait a moment.');return}
+ tokenClient.requestAccessToken({prompt:accessToken?'':'consent'})
+}
+async function findOrCreateBackup(){
+ if(!accessToken||!gapiReady)return;
+ try{
+   const q=`name='${BACKUP_NAME}' and trashed=false`;
+   const res=await gapi.client.drive.files.list({q,spaces:'drive',fields:'files(id,name,modifiedTime,appProperties)'});
+   const files=res.result.files||[];
+   if(files.length){backupFileId=files[0].id;await downloadBackup()}
+   else await createBackup()
+ }catch(e){console.error(e);setStatus('Drive connected, but backup file could not be opened','err')}
+}
+async function createBackup(){
+ const body=JSON.stringify(getRecords()),metaData={name:BACKUP_NAME,mimeType:'application/json',appProperties:{app:'mact_legal_portal',version:'2'}};
+ const form=new FormData();form.append('metadata',new Blob([JSON.stringify(metaData)],{type:'application/json'}));form.append('file',new Blob([body],{type:'application/json'}));
+ const res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+accessToken},body:form});if(!res.ok)throw new Error('Create backup failed');const x=await res.json();backupFileId=x.id;await uploadBackup(false)
+}
+async function downloadBackup(){
+ if(!backupFileId)return;
+ try{
+  const res=await fetch(`https://www.googleapis.com/drive/v3/files/${backupFileId}?alt=media`,{headers:{Authorization:'Bearer '+accessToken}});
+  if(!res.ok){if(res.status===401){accessToken=null;login()}throw new Error('Download failed '+res.status)}
+  const cloud=await res.json();if(!Array.isArray(cloud))return;
+  const local=getRecords();
+  /* Smart merge: same stable id is one record; newest updatedAt wins. */
+  const map=new Map(local.map(r=>[r.id,r]));
+  cloud.forEach(r=>{if(!r.id)r.id=uid();const l=map.get(r.id);if(!l||String(r.updatedAt||'')>String(l.updatedAt||''))map.set(r.id,r)});
+  const merged=[...map.values()].sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')));
+  setRecords(merged);render();setLastSync('Cloud downloaded & merged');setStatus(`Synced with Google Drive — ${merged.length} records`,'ok');
+ }catch(e){console.error(e);setStatus('Drive download error — local data preserved','err')}
+}
+async function uploadBackup(show=true){
+ if(!backupFileId||!accessToken)return false;
+ const body=JSON.stringify(getRecords());
+ if(body.length>12*1024*1024){setStatus('Backup is very large. Large PDFs should be stored separately.','warn');}
+ try{
+  const res=await fetch(`https://www.googleapis.com/upload/drive/v3/files/${backupFileId}?uploadType=media`,{method:'PATCH',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body});
+  if(!res.ok){if(res.status===401){accessToken=null;setStatus('Google token expired — reconnect required','err')}throw new Error('Upload '+res.status)}
+  setLastSync('Uploaded successfully');if(show)setStatus('Google Drive backup updated ✅','ok');return true
+ }catch(e){console.error(e);setStatus('Drive upload failed — local data is safe','err');return false}
+}
+async function syncNow() {
+
+    await loadFromDrive();
+    return uploadBackupToDrive();
+}
+function setLastSync(text){$('lastSync').textContent='Last sync: '+text;saveMeta({...meta(),lastSync:Date.now()})}
+function startAutoSync(){clearInterval(syncTimer);syncTimer=setInterval(()=>{if(navigator.onLine&&accessToken)syncNow()},60000)}
+function signOut(){accessToken=null;backupFileId=null;clearInterval(syncTimer);saveMeta({...meta(),connected:false});$('accountLabel').textContent='No Google account';setStatus('Signed out — Local Storage Active');}
+window.addEventListener('online',()=>{setStatus(accessToken?'Online — Drive connected':'Online — Local Mode',accessToken?'ok':'warn')});
+window.addEventListener('offline',()=>setStatus('Offline — Local Storage Active','warn'));
+
+$('newBtn').onclick=()=>{resetForm();$('newModal').style.display='flex'};
+$('closeNew').onclick=()=>$('newModal').style.display='none';
+$('closeDetail').onclick=()=>$('detailModal').style.display='none';
+$('closeDate').onclick=()=>$('dateModal').style.display='none';
+$('closeEditProc').onclick=()=>$('editProcModal').style.display='none';
+$('closeBulk').onclick=()=>$('bulkModal').style.display='none';
+$('loginBtn').onclick=login;$('syncBtn').onclick=syncNow;$('logoutBtn').onclick=signOut;
+$('search').oninput=render;$('printToday').onclick=printToday;$('printRecords').onclick=printRecords;$('exportBtn').onclick=exportCsv;
+$('importInput').onchange=e=>e.target.files[0]&&importCsv(e.target.files[0]);
+$('addProc').onclick=()=>{$('proceedings').insertAdjacentHTML('beforeend',procTemplate());const p=[...$('proceedings').children].at(-1);p.insertAdjacentHTML('beforeend','<button type="button" class="btn danger removeProc">Remove</button>');p.querySelector('.removeProc').onclick=()=>p.remove()};
+$('caseForm').onsubmit=async e=>{e.preventDefault();const b=$('saveBtn');b.disabled=true;try{await saveRecord(collectForm());$('formMsg').textContent='Saved locally and synced. Word file can be generated from record view.';setTimeout(()=>$('newModal').style.display='none',700)}catch(err){console.error(err)}finally{b.disabled=false}};
+$('selectAll').onchange=e=>{document.querySelectorAll('.record-checkbox').forEach(x=>x.checked=e.target.checked);updateBulk()};
+$('bulkDelete').onclick=async()=>{const ids=selectedIds();if(!ids.length)return;if(!confirm(`Delete ${ids.length} selected record(s)?`))return;setRecords(getRecords().filter(r=>!ids.includes(r.id)));$('selectAll').checked=false;render();await syncNow()};
+$('bulkEdit').onclick=()=>$('bulkModal').style.display='flex';
+$('saveBulk').onclick=async()=>{const ids=selectedIds(),rs=getRecords();rs.forEach(r=>{if(ids.includes(r.id)){if($('bCourt').value.trim())r.courtName=$('bCourt').value.trim();if($('bIns').value.trim())r.insuranceCo=$('bIns').value.trim();if($('bDistrict').value.trim())r.district=$('bDistrict').value.trim();if($('bStatus').value.trim())r.finalStatus=$('bStatus').value.trim();touch(r)}});setRecords(rs);$('bulkModal').style.display='none';render();await syncNow()};
+$('saveEp').onclick=async()=>{const rs=getRecords(),r=rs.find(x=>x.id===$('epRec').value),i=Number($('epIndex').value);if(!r||!r.proceedings[i])return;r.proceedings[i]={...r.proceedings[i],proceedingDate:$('epDate').value,nextDate:$('epNext').value,notes:$('epNotes').value,updatedAt:now()};touch(r);setRecords(rs);$('editProcModal').style.display='none';render();await syncNow()};
+$('addDateBtn').onclick=()=>{$('dateSearch').value='';$('dateResult').innerHTML='';$('dateModal').style.display='flex'};
+$('findFile').onclick=()=>{const q=$('dateSearch').value.trim().toLowerCase();if(!q)return;const rs=getRecords().filter(r=>[r.id,r.fileNumber,r.mactNo,r.caseTitle,r.claimantName].some(v=>String(v||'').toLowerCase().includes(q)));if(!rs.length){$('dateResult').innerHTML='<p style="color:var(--danger)">No matching file found.</p>';return}$('dateResult').innerHTML=rs.slice(0,8).map(r=>`<div class="proc"><b>${esc(r.fileNumber||'N/A')} | ${esc(r.mactNo||'')} | ${esc(r.caseTitle||'')}</b><br><small>${esc(r.claimantName||'')} · ${esc(r.courtName||'')}</small><div class="grid" style="margin-top:10px"><div class="group"><label>Proceeding Date</label><input id="dp_${r.id}" type="date"></div><div class="group"><label>Next Date</label><input id="dn_${r.id}" type="date"></div></div><div class="group" style="margin-top:8px"><label>Notes</label><textarea id="dt_${r.id}" rows="2"></textarea></div><button class="btn accent" onclick="saveQuickDate('${r.id}')">Save Hearing</button></div>`).join('')};
+window.saveQuickDate=async id=>{const rs=getRecords(),r=rs.find(x=>x.id===id);if(!r)return;const a=$('dp_'+id).value,b=$('dn_'+id).value,c=$('dt_'+id).value;if(!a&&!b&&!c)return alert('Enter at least one value.');r.proceedings=r.proceedings||[];r.proceedings.push({id:uid(),proceedingDate:a,nextDate:b,notes:c,updatedAt:now()});touch(r);setRecords(rs);render();await syncNow();$('dateModal').style.display='none';alert('Hearing added successfully.')};
+
+buildForm();records=getRecords();Object.entries(defaults).forEach(([k,v])=>{if($(k)&&!$(k).value)$(k).value=v});render();
+setInterval(()=>refreshDashboard(),30000);
+window.addEventListener('load',()=>{setTimeout(initGoogle,1200);const m=meta();if(m.lastSync){$('lastSync').textContent='Last sync: '+new Date(m.lastSync).toLocaleString()}if(m.connected)setStatus('Ready to reconnect to Google Drive','warn')});
+</script>
+
+<script>
+(function(){
+  window.setSyncStatus = window.setSyncStatus || function(msg, state){
+    const el=document.getElementById('syncStatus');
+    if(el){ el.textContent=msg; el.dataset.state=state||''; }
+    console.log('[Drive]', msg);
+  };
+  function callServer(){
+    if(window.google && google.script && google.script.run) {
+      if(typeof window.loadFromDrive==='function') window.loadFromDrive();
+    } else {
+      setSyncStatus('Open from Apps Script Web App URL', 'error');
+    }
+  }
+  window.addEventListener('load', function(){
+    setTimeout(callServer, 500);
+    setInterval(function(){
+      if(document.visibilityState !== 'hidden' && navigator.onLine) callServer();
+    }, 60000);
+  });
+})();
+</script>
+
+</body>
+</html>
