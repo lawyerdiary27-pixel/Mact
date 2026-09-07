@@ -350,9 +350,8 @@ th{background:#f8fafc;color:#475569;font-weight:800;position:sticky;top:0}
   <form id="addDateForm">
    <div class="modal-body">
     <div class="field" style="margin-bottom:12px">
-     <label>Search & Select Case (by Case Title, MACT No., Claimant, Mobile, Vehicle, etc.)</label>
-     <input type="text" id="hearingRecordSearch" placeholder="Type to filter cases..." style="margin-bottom:8px;">
-     <select id="hearingRecordSelect" size="5" style="height:auto; min-height:100px;"></select>
+     <label>Case</label>
+     <select id="hearingRecordSelect"></select>
     </div>
 
     <div class="proceeding-grid">
@@ -389,7 +388,7 @@ th{background:#f8fafc;color:#475569;font-weight:800;position:sticky;top:0}
    ============================================================ */
 
 const APPS_SCRIPT_URL =
-"https://script.google.com/macros/s/AKfycbz3r2wmYywfYyhvx477cAdSfDAdsjse-zk6xemn17wbp5hDv2OPt_03uKpYmTZBPawO/exec";
+"https://script.google.com/macros/s/AKfycbzZrSRDmqZktZfnD5E1ixU_iN6kWiSoiis6N4lVF8TPtg6WgIFt3UDus9yQGUZg_dqP/exec";
 
 const STORAGE_KEY = "mact_unlimited_records";
 const PDF_MAX_MB = 5;
@@ -402,183 +401,259 @@ let syncBusy = false;
 let cloudTimer = null;
 
 /* ============================================================
-   FIELD DEFINITIONS - WITH ENHANCED DROPDOWNS
+   FIELD DEFINITIONS - REORDERED ACCORDING TO CRM PDF STRUCTURE
    ============================================================ */
 
 const sections = [
 {
- title:"1. CASE / FILE / ACCOUNT INFORMATION",
+ title:"1. CASE INFORMATION",
  fields:[
-  ["caseTitle","Case Title","text","full"],
-  ["mactNo","MACT No.","text"],
-  ["fileNumber","File Number","text"],
-  ["courtName","Court Name","text"],
-  ["sections","Sections","select",["166 MV ACT", "140 MV ACT", "163A MV ACT", "OTHER"]],
-  ["accidentType","Accident Type","select",["INJURY", "FATAL", "PROPERTY DAMAGE"]],
-  ["filingYear","Filing Year","number"],
-  ["filingMonth","Filing Month","select",["January","February","March","April","May","June","July","August","September","October","November","December"]],
-  ["caseGivenBy","Case Given By","text"],
-  ["clientFromOtherAdv","Client From Other Advocate","text"],
-  ["importanceLevel","Importance Level","select",["Normal", "Important", "Urgent", "High Priority"]],
   ["presentation","Presentation","text"],
   ["accountName","Account Name","text"],
-  ["accountType","Account Type","select",["Savings", "Current", "MACT Account", "Fixed Deposit"]],
-  ["accountSite","Account Site","text"],
-  ["cifNumber","CIF Number","text"],
-  ["accountsNumbers","Accounts Numbers","text"],
-  ["accountNumberDup","Account Number Duplicate","text"],
-  ["accountHolderName","Account Holder Name","text"],
-  ["ifscCode","IFSC Code","text"],
-  ["bankName","Bank Name","text"],
-  ["bankBranchName","Bank Branch Name","text"],
-  ["allClaimantsAccountDetail","All Claimants Account Detail","textarea","full"],
-  ["hpoAccountClosed","HPO Account Closed","select",["NO", "YES"]],
-  ["ifscHpoIppb","IFSC HPO / IPPB","text"],
-  ["hpoIppbBranchName","HPO / IPPB Branch Name","text"]
- ]
-},
-{
- title:"2. CLAIMANT / PERSONAL INFORMATION",
- fields:[
-  ["claimantName","Claimant Name","text"],
-  ["fatherName","Father / Husband Name","text"],
-  ["age","Age","number"],
-  ["income","Income","text"],
-  ["occupation","Occupation","text"],
-  ["religion","Religion","text"],
-  ["village","Village","text"],
-  ["town","Town","text"],
-  ["tehsil","Tehsil","text"],
-  ["block","Block","text"],
-  ["psAccident","Police Station of Accident","text"],
-  ["district","District","text"],
-  ["otherDistricts","Other Districts","text"],
-  ["state","State","text"],
-  ["email","Email","email"],
-  ["mobile","Mobile","tel"],
-  ["mobile2","Mobile 2","tel"],
-  ["mobile1","Mobile 1","tel"],
-  ["mobileNum2","Mobile Number 2","tel"],
-  ["mobile3","Mobile 3","tel"],
-  ["mobileNumGen","Mobile Number General","tel"],
-  ["otherAddress","Other Address","textarea","full"],
-  ["isIncomeTaxPayee","Income Tax Payee","select",["NO", "YES"]]
- ]
-},
-{
- title:"3. ACCIDENT / FIR / VEHICLE / INVESTIGATION",
- fields:[
-  ["accidentDate","Accident Date","date"],
-  ["crimeNo","Crime No.","text"],
-  ["firOrGd","FIR / GD","select",["FIR", "GD", "Both"]],
-  ["gd","GD","text"],
-  ["fir","FIR","text"],
-  ["fr","FR","text"],
-  ["vehicleNo","Vehicle Number","text"],
-  ["vehicleType","Vehicle Type","select",["Motor Cycle", "Car", "Truck", "Bus", "Auto Rickshaw", "Tractor", "Tempo", "Unknown"]],
-  ["ownerName","Owner Name","text"],
-  ["insuranceCo","Insurance Company","text"],
+  ["filingMonth","Filing Month","text"],
+  ["filingYear","Filing Year","number"],
+  ["compromiseStatus","Compromisable / Non Compromisable / Hold","text"],
+  ["accidentType","Type of Accident (Injury / Death)","text"],
+  ["importanceLevel","Importance Level","text"],
+  ["courtName","Court Name","text"],
+  ["executives","Executives","textarea","full"],
+  ["caseGivenBy","Case Given By","text"],
+  ["advanceGivenYesNo","Advance Given to Claimant (YES/NO)","text"],
+  ["advanceGivenDetails","Advance given to Claimant (Name, Date & Amount)","textarea","full"],
+  ["caseTitle","Case Title","text","full"],
+  ["mactNo","MACP / Case No.","text"],
+  ["sections","Under Sections","text"],
+  ["fileNumber","File Number","text"],
+  ["fees","Fees","text"],
   ["insuranceDetails","Insurance Details","textarea","full"],
-  ["driverName","Driver Name","text"],
-  ["ioDetails","IO Details","textarea"],
-  ["otherInvestigatorsDetail","Other Investigators Detail","textarea"],
-  ["investigatorName","Investigator Name","text"]
- ]
-},
-{
- title:"4. ADVOCATES / REPRESENTATION",
- fields:[
   ["claimantCouncil","Claimant Council","text"],
-  ["ownerAdvocate","Owner Advocate","text"],
-  ["driverAdvocate","Driver Advocate","text"],
-  ["insuranceAdvocate","Insurance Advocate","text"],
-  ["hcAdvocateName","HC Advocate Name","text"],
-  ["ourSideRepresentation","Our Side Representation","text"],
-  ["executives","Executives","textarea","full"]
+  ["insuranceCo","Insurance Company","text"],
+  ["clientFromOtherAdv","Case / Client coming from other Advocate","text"],
+  ["ownerName","Owner's Name","text"],
+  ["driverName","Driver's Name","text"],
+  ["issueFramedDate","Issue Framed Date","date"]
  ]
 },
 {
- title:"5. DOCUMENTS / MEDICAL / DISABILITY",
+ title:"2. FIR & ACCIDENT RELATED DETAILS",
  fields:[
-  ["photoCopyStatus","Photo Copy Status","select",["Pending", "Received", "Complete"]],
-  ["fileStatusComplete","File Status Complete","select",["NO", "YES"]],
-  ["certifiedCopiesStatus","Certified Copies Status","select",["Pending", "Applied", "Received"]],
-  ["regCertificate","Registration Certificate","select",["Available", "Not Available", "Verified"]],
-  ["drivingLicense","Driving License","select",["Valid", "Invalid", "Fake", "Not Available"]],
-  ["permit","Permit","select",["Valid", "Invalid", "Not Available"]],
-  ["fitness","Fitness","select",["Valid", "Invalid", "Not Available"]],
-  ["insuranceDoc","Insurance Document","select",["Valid", "Fake", "Not Available"]],
-  ["pollution","Pollution","select",["Valid", "Invalid", "Not Available"]],
-  ["bailOrder","Bail Order","select",["Available", "Not Available"]],
-  ["releaseOrder","Release Order","select",["Available", "Not Available"]],
-  ["chargeSheet","Charge Sheet","select",["Submitted", "Pending"]],
-  ["injuryReport","Injury Report","select",["Available", "Not Available"]],
-  ["punchnama","Punchnama","select",["Available", "Not Available"]],
-  ["postMortem","Post Mortem","select",["Available", "Not Available"]],
-  ["sitePlan","Site Plan","select",["Available", "Not Available"]],
-  ["disabilityPercentage","Disability Percentage","text"],
-  ["disabilityNature","Disability Nature","text"],
-  ["disabilityCertificate","Disability Certificate","select",["Available", "Not Available"]],
-  ["disabilityCertNoDob","Disability Cert No / DOB","text"],
+  ["firOrGd","FIR or GD","text"],
+  ["accidentDate","Accident Date","date"],
+  ["crimeNo","Crime / GD No.","text"],
+  ["vehicleNo","Vehicle Number","text"],
+  ["fir","U/S (FIR)","text"],
+  ["vehicleType","Vehicle's Type","text"],
+  ["psAccident","P.S. (Accident)","text"],
+  ["district","Distt. (Accident)","text"],
+  ["ioDetails","Investigation Officer (I.O.) name and mobile number","textarea"],
+  ["state","States (Accident)","text"],
+  ["insuranceAdvocate","Insurance Company's Advocate","text"],
+  ["driverAdvocate","Driver's Advocate","text"],
+  ["insuranceAdvMobile","Insurance Adv Mobile No","tel"],
+  ["driverAdvMobile","Driver Adv Mobile No","tel"],
+  ["investigatorName","Investigator Name","text"],
+  ["ownerAdvocate","Owner's Advocate","text"],
+  ["ownerAdvMobile","Owner Adv Mobile No","tel"],
+  ["otherInvestigatorsDetail","Other Investigators Detail","textarea"]
+ ]
+},
+{
+ title:"3. CLAIMANT INFORMATION",
+ fields:[
+  ["religion","Religion","text"],
+  ["fatherName","Father's / Husband Name","text"],
+  ["claimantName","Injured / Deceased Name","text"],
+  ["age","Age of Injured / Deceased","number"],
+  ["income","Income of Injured / Deceased","text"],
+  ["occupation","Occupation of Injured / Deceased","text"],
+  ["isIncomeTaxPayee","Is Injured / Deceased Income Tax Payee","text"],
+  ["village","Village / Mohalla","text"],
+  ["block","Block","text"],
+  ["hpoAccountClosed","PO (Post Office)","text"],
+  ["tehsil","Tehsil","text"],
+  ["town","Town","text"],
+  ["psAccidentStation","Police Station","text"],
+  ["districtClaimant","District","text"],
+  ["stateClaimant","State","text"],
+  ["otherDistricts","Other Districts","text"],
+  ["mobile","Mobile No 1","tel"],
+  ["mobile2","Mobile No 2","tel"],
+  ["mobile3","Mobile No 3","tel"],
+  ["email","Email","email"],
+  ["otherAddress","Other Address of Claimant","textarea","full"]
+ ]
+},
+{
+ title:"4. MEDICAL EXPENSES & HANDICAP",
+ fields:[
+  ["medicalBillsExpenses","Medical Bills Expenses Rs.","textarea","full"],
+  ["disabilityNature","Permanent / Non Permanent Disability","text"],
+  ["verifiedMedicalBills","Verified Medical Bills by Insurance","text"],
+  ["disabilityCertificate","Disability Certificate","text"],
   ["disabilityValidityFrom","Disability Validity From","date"],
   ["disabilityValidityTill","Disability Validity Till","date"],
-  ["medicalBillsExpenses","Medical Bills / Expenses","textarea","full"],
-  ["verifiedMedicalBills","Verified Medical Bills","text"]
+  ["disabilityCertificateNum","Disability Certificate Number","text"],
+  ["disabilityPercentage","Disability Percentage","text"],
+  ["disabilityCertNoDob","Number and Date of Birth","text"]
  ]
 },
 {
- title:"6. PROCEEDINGS / CLAIMS / COMPROMISE / APPEAL / FINAL STATUS",
+ title:"5. OTHER CLAIMS",
  fields:[
-  ["issueFramedDate","Issue Framed Date","date"],
-  ["kbFilingDate","KB Filing Date","date"],
-  ["protestFilingDate","Protest Filing Date","date"],
-  ["lowerCourtProtest","Lower Court Protest","text"],
-  ["isProtestPending","Is Protest Pending","select",["NO", "YES"]],
-  ["miscNoProtest","Misc No. Protest","text"],
-  ["nextDateProtest","Next Date Protest","date"],
-  ["rplyFilingDate","Reply Filing Date","date"],
-  ["rplyNotes","Reply Notes","textarea","full"],
+  ["paOwnerDriver","PA (Owner cum Driver)","text"],
   ["paFilingDate","PA Filing Date","date"],
-  ["licInsFilingDate","LIC Insurance Filing Date","date"],
-  ["bankClaimFilingDate","Bank Claim Filing Date","date"],
-  ["esFilingDate","E-S Filing Date","date"],
+  ["kisanBima","Kisan Bima","text"],
+  ["kbFilingDate","KB Filing Date","date"],
+  ["atmClaim","ATM Claim","text"],
   ["atmClaimFilingDate","ATM Claim Filing Date","date"],
-  ["labourCardFilingDate","Labour Card Filing Date","date"],
+  ["licInsurance","LIC Insurance","text"],
+  ["licInsFilingDate","LIC INS Filing Date","date"],
+  ["eShram","E Shram","text"],
+  ["esFilingDate","ES Filing Date","date"],
+  ["rplyNotes","RPLY","text"],
+  ["rplyFilingDate","RPLY Filing Date","date"],
+  ["bankClaim","BANK CLAIM","text"],
+  ["bankClaimFilingDate","BANK CLAIM Filing Date","date"],
+  ["labourCard","LABOUR CARD","text"],
+  ["labourCardFilingDate","Labour Card filing Date","date"]
+]
+},
+{
+ {
+ title:"6. PHOTO COPIES",
+ fields:[
+  ["photoCopyStatus","PHOTO COPY STATUS","text"],
+  ["regCertificate","REGISTRATION CERTIFICATE","text"],
+  ["insuranceDoc","INSURANCE","text"],
+  ["drivingLicense","DRIVING LICENSE","text"],
+  ["permit","PERMIT","text"],
+  ["fitness","FITNESS","text"],
+  ["pollution","POLLUTION","text"],
+  ["othersNotes","OTHERS","textarea","full"]
+ ]
+},
+{
+ title:"7. CERTIFIED COPIES",
+ fields:[
+  ["certifiedCopiesStatus","Certified Copies Status","text"],
+  ["fir","FIR","text"],
+  ["chargeSheet","CHARGE SHEET","text"],
+  ["injuryReport","INJURY REPORT","text"],
+  ["postMortem","POST MORTEM","text"],
+  ["punchnama","PUNCHNAMA","text"],
+  ["bailOrder","BAIL ORDER","text"],
+  ["releaseOrder","RELEASE ORDER","text"],
+  ["sitePlan","SITE PLANE","text"],
+  ["gd","GD","text"],
+  ["fr","FR","text"]
+ ]
+},
+{
+ title:"8. PROTEST & FILE STATUS",
+ fields:[
+  ["lowerCourtProtest","IS PROTEST PENDING IN LOWER COURT","text"],
+  ["protestFilingDate","PROTEST FILING DATE","date"],
+  ["lowerCourtWhereProtestFiled","LOWER COURT WHERE PROTEST FILED","text"],
+  ["miscNoProtest","MISC. NUMBER OF PROTEST","text"],
+  ["nextDateProtest","NEXT DATE OF PROTEST APPLICATION","date"],
+  ["protestOthers","OTHERS","textarea","full"],
+  ["fileStatusComplete","FILE STATUS (COMPLETE OR NOT COMPLETE BY DOCUMENT)","text"]
+ ]
+},
+{
+ title:"9. BANK ACCOUNT DETAILS",
+ fields:[
+  ["accountHolderName","Account Holder Name (If Claimant is Single)","text"],
+  ["bankName","BANK NAME","text"],
+  ["accountsNumbers","Accounts Numbers","text"],
+  ["cifNumber","CIF Number","text"],
+  ["ifscHpoIppb","IFSC CODE OF HPO / IPPB","text"],
+  ["hpoIppbBranchName","HPO / IPPB Bank Branch Name","text"],
+  ["ifscCode","IFSC Code","text"],
+  ["bankBranchName","Bank Branch Name","text"],
+  ["allClaimantsAccountDetail","All Claimants Account number & Bank Detail","textarea","full"]
+ ]
+},
+{
+ title:"10. FINAL STAGE",
+ fields:[
+  ["judgementStatus","Judgement Status","text"],
+  ["dateJudgementCompromise","DATE of Judgement date / Compromise date / DD","date"],
+  ["monthCompromise","MONTH of Compromise / Award / DD / Dismiss","text"],
+  ["yearCompromise","YEAR of Compromise / Award / DD / Dismiss","number"],
   ["compromiseFilingDate","Compromise Filing Date","date"],
-  ["compromiseStatus","Compromise Status","select",["Pending", "Compromised", "Failed"]],
-  ["suggestLokAdalat","Suggest Lok Adalat","select",["NO", "YES"]],
-  ["lokAdalatDocStatus","Lok Adalat Document Status","text"],
-  ["lokAdalatDocsReq","Lok Adalat Documents Required","textarea","full"],
-  ["atmClaim","ATM Claim","select",["NO", "YES"]],
-  ["bankClaim","Bank Claim","select",["NO", "YES"]],
-  ["eShram","E-Shram","select",["NO", "YES"]],
-  ["licInsurance","LIC Insurance","select",["NO", "YES"]],
-  ["paOwnerDriver","PA Owner / Driver","select",["NO", "YES"]],
-  ["labourCard","Labour Card","select",["NO", "YES"]],
-  ["kisanBima","Kisan Bima","select",["NO", "YES"]],
-  ["advanceGivenYesNo","Advance Given Yes / No","select",["NO", "YES"]],
-  ["advanceGivenDetails","Advance Given Details","textarea","full"],
   ["compensationAmount","Compensation Amount","text"],
-  ["monthCompromise","Month Compromise","text"],
-  ["yearCompromise","Year Compromise","number"],
-  ["dateJudgementCompromise","Date Judgment / Compromise","date"],
-  ["bankCompromiseReceived","Bank Compromise Received","select",["NO", "YES"]],
+  ["bankCompromiseReceived","Name of Bank where Compensation Received","text"],
   ["ddRestoredDate","DD Restored Date","date"],
-  ["judgementStatus","Judgment Status","select",["Pending", "Judgment Passed", "Compromised", "Dismissed"]],
-  ["finalStatus","Final Status","select",["Active", "Pending", "Closed", "Disposed"]],
-  ["hcAppealStatus","HC Appeal Status","select",["None", "Filed", "Pending", "Decided"]],
-  ["fafoNumber","FAFO Number","text"],
-  ["hcAppealBrief","HC Appeal Brief","textarea","full"],
-  ["appealCaveatDate","Appeal Caveat Date","date"],
-  ["enrichStatus","Enrich Status","text"],
-  ["connectedToModule","Connected To Module","text"],
-  ["connectedToId","Connected To ID","text"],
-  ["lastActivityTime","Last Activity Time","text"],
-  ["lastEnrichedTime","Last Enriched Time","text"],
-  ["changeLogTime","Change Log Time","text"],
-  ["locked","Locked","select",["NO", "YES"]],
-  ["description","Description","textarea","full"],
-  ["othersNotes","Others Notes","textarea","full"]
+  ["hcAppealStatus","HIgh Court Appeal / Caveat Status","text"],
+  ["appealCaveatDate","Appeal / Caveat Date","date"],
+  ["fafoNumber","FAFO NUMBER","text"],
+  ["hcAppealBrief","Brief of High Court Appeal","textarea","full"],
+  ["hcAdvocateName","High Court Advocate Name","text"],
+  ["hcAdvMobile","Mobile Num","tel"],
+  ["suggestLokAdalat","SUGGEST FOR COMPROMISE BY INSURANCE ADVOCATE","text"],
+  ["suggestCompromiseLokAdalat","SUGGEST COMPromise IN LOK ADALAT BY INSURANCE ADV","text"],
+  ["lokAdalatDocsReq","DOCUMENTS REQUIRED FOR COMPROMISE IN LOKADALAT","textarea","full"],
+  ["lokAdalatDocStatus","LOK ADALAT DOCUMENT REQUIREMENT STATUS","text"],
+  ["finalStatus","FINAL STATUS","text"]
+ ]
+},
+{
+ title:"11. RTI (RIGHT TO INFORMATION)",
+ fields:[
+  ["rtiInfo","RTI (RIGHT TO INFORMATION)","text"],
+  ["rtiReceivedDocs","RECEIVED DOCUMENTS / PAPERS BY RTI","textarea","full"],
+  ["rtiOfficeSent","WHICH OFFICE TO RTI SENT","text"],
+  ["rtiReqDocs","REQUIRED DOCUMENTS / PAPERS OF RTI","textarea","full"],
+  ["rtiReceivedDate","RTI RECEIVED DATE","date"],
+  ["rtiSentDate","RTI SENT DATE","date"]
+ ]
+},
+{
+ title:"12. REPAYMENT",
+ fields:[
+  ["repaymentFeePaidUnpaid","REPAYMENT FEE PAID / UNPAID","text"],
+  ["repaymentMiscNumber","REPAYMENT MISC. NUMBER","text"],
+  ["repaymentStatus","REPAYMENT STATUS","text"],
+  ["repaymentNextDate","REPAYMENT NEXT DATE","date"],
+  ["repaymentFilingDate","REPAYMENT FILING DATE","date"],
+  ["repaymentCompletedDate","REPAYMENT COMPLETED DATE","date"]
+ ]
+},
+{
+ title:"13. RECOVERY",
+ fields:[
+  ["recoveryStatus","RECOVERY STATUS","text"],
+  ["recoveryNextDate","RECOVERY NEXT DATE","date"],
+  ["recoveryFilingDate","RECOVERY FILING DATE","date"],
+  ["recoveryCompletedDate","RECOVERY COMPLETED DATE","date"],
+  ["recoveryMiscNumber","RECOVERY MISC. NUMBER","text"]
+ ]
+},
+{
+ title:"14. FDR DETAILS",
+ fields:[
+  ["fdrStatus","FDR STATUS","text"],
+  ["fdrNextDate","FDR NEXT DATE","date"],
+  ["fdrPrematureMatured","FDR PREMATURE OR MATURED RELEASE","text"],
+  ["fdrHolderName","FDR HOLDER/HOLDERS NAME","text"],
+  ["fdrCompletedDate","FDR COMPLETED DATE","date"],
+  ["fdrPrematureReleaseStatus","PREMATURE FDR RELEASE STATUS","text"],
+  ["fdrFilingDate","FDR FILING DATE","date"],
+  ["fdrMiscNumber","FDR MISC. NUMBER","text"],
+  ["fdr1HolderName","1.1 FDR Holder Name","text"],
+  ["fdr1Number","1.2 FDR Number","text"],
+  ["fdr1Amount","1.3 FDR Amount","text"],
+  ["fdr1IssuingDate","1.5 FDR Issuing Date","date"],
+  ["fdr1MaturityDate","1.6 FDR Maturity Date","date"],
+  ["fdr1BankBranch","1.7 FDR Bank Name and Branch","text"],
+  ["fdr1SerialNo","1.8 Register Serial Number","text"]
+ ]
+},
+{
+ title:"15. OTHER DESCRIPTIONS & DETAILS",
+ fields:[
+  ["description","Other Descriptions & Details","textarea","full"]
  ]
 }
 ];
@@ -668,20 +743,15 @@ function renderForm(){
      <div class="form-grid">
   `;
   section.fields.forEach(field=>{
-   const [id,label,type,optOrCls,clsParam]=field;
+   const [id,label,type,cls]=field;
    let input="";
    if(type==="textarea"){
-    const fullCls = optOrCls==="full" || clsParam==="full" ? "full" : "";
-    input=`<textarea id="${id}" name="${id}"></textarea>`;
-   }else if(type==="select"){
-    const opts=Array.isArray(optOrCls)?optOrCls:[];
-    input=`<select id="${id}" name="${id}">${opts.map(o=>`<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join("")}</select>`;
+    input=`<textarea id="${id}" name="${id}" ${cls==="full"?"":""}></textarea>`;
    }else{
     input=`<input id="${id}" name="${id}" type="${type}" autocomplete="off">`;
    }
-   const isFull = (type==="textarea" && (optOrCls==="full" || clsParam==="full")) || clsParam==="full";
    html+=`
-    <div class="field ${isFull?"full":""}">
+    <div class="field ${cls==="full"?"full":""}">
      <label for="${id}">${escapeHtml(label)}</label>
      ${input}
     </div>
@@ -883,6 +953,7 @@ $("newFileForm").addEventListener("submit",async e=>{
  editingRecordId=null;
  toast(existing?"Record updated successfully.":"Record saved successfully.");
  await syncCloud();
+ downloadWord(data);
 });
 
 function readFileAsDataURL(file){
@@ -1083,29 +1154,10 @@ function checkTodaysHearings(){
  `).join("");
 }
 
-function populateHearingSelect(filterText=""){
- const select=$("hearingRecordSelect");
- const query=filterText.toLowerCase().trim();
- const filtered=records.filter(r=>{
-  if(!query)return true;
-  return JSON.stringify(r).toLowerCase().includes(query);
- });
- select.innerHTML=filtered.map(r=>`
-  <option value="${escapeHtml(r.recordId)}">${escapeHtml((r.caseTitle||"Untitled") + " | MACT: " + (r.mactNo||"—") + " | Claimant: " + (r.claimantName||"—") + " | Veh: " + (r.vehicleNo||"—"))}</option>
- `).join("");
-}
-
-$("hearingRecordSearch").addEventListener("input",e=>{
- populateHearingSelect(e.target.value);
-});
-
 function openHearingModal(id){
- $("hearingRecordSearch").value="";
- populateHearingSelect();
- if(id){
-  const sel=$("hearingRecordSelect");
-  sel.value=id;
- }
+ $("hearingRecordSelect").innerHTML=records.map(r=>`
+  <option value="${escapeHtml(r.recordId)}" ${r.recordId===id?"selected":""}>${escapeHtml(r.caseTitle||r.claimantName||r.mactNo||"Untitled")}</option>
+ `).join("");
  $("newProceedingDate").value=localDate();
  $("newNextDate").value="";
  $("newProceedingNotes").value="";
@@ -1120,7 +1172,7 @@ $("topAddDateBtn").addEventListener("click",()=>{
 $("addDateForm").addEventListener("submit",e=>{
  e.preventDefault();
  const r=getRecord($("hearingRecordSelect").value);
- if(!r){ toast("Please select a valid case record."); return; }
+ if(!r)return;
  if(!$("newNextDate").value){ toast("Please enter Next Date."); return; }
  if(!Array.isArray(r.proceedings))r.proceedings=[];
  r.proceedings.push({
@@ -1233,6 +1285,30 @@ $("importCsvInput").addEventListener("change",e=>{
  };
  reader.readAsText(file);
 });
+
+function downloadWord(record){
+ let body=`<h1>MACT Case Record</h1><h2>${escapeHtml(record.caseTitle||"Untitled Case")}</h2><p><b>Case ID:</b> ${escapeHtml(record.recordId)}</p>`;
+ sections.forEach(section=>{
+  body+=`<h3>${escapeHtml(section.title)}</h3><table>`;
+  section.fields.forEach(([id,label])=>{
+   const value=record[id];
+   body+=`<tr><td><b>${escapeHtml(label)}</b></td><td>${escapeHtml(value||"")}</td></tr>`;
+  });
+  body+=`</table>`;
+ });
+ body+=`<h3>Proceedings</h3><table><tr><th>Proceeding Date</th><th>Next Date</th><th>Notes</th></tr>`;
+ (record.proceedings||[]).forEach(p=>{
+  body+=`<tr><td>${escapeHtml(formatDate(p.proceedingDate))}</td><td>${escapeHtml(formatDate(p.nextDate))}</td><td>${escapeHtml(p.notes||"")}</td></tr>`;
+ });
+ body+=`</table>`;
+ const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;padding:30px}h1{color:#1e3a8a}table{width:100%;border-collapse:collapse;margin-bottom:20px}td,th{border:1px solid #bbb;padding:7px;text-align:left}td:first-child{width:30%;background:#f2f4f7}</style></head><body>${body}</body></html>`;
+ const blob=new Blob(["\ufeff",html],{type:"application/msword"});
+ downloadBlob(blob,`${sanitizeFilename(record.caseTitle||"MACT_Case")}.doc`);
+}
+
+function sanitizeFilename(name){
+ return String(name).replace(/[\\/:*?"<>|]+/g,"_").slice(0,100);
+}
 
 function openPdf(id){
  const r=getRecord(id);
