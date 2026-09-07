@@ -350,8 +350,9 @@ th{background:#f8fafc;color:#475569;font-weight:800;position:sticky;top:0}
   <form id="addDateForm">
    <div class="modal-body">
     <div class="field" style="margin-bottom:12px">
-     <label>Case</label>
-     <select id="hearingRecordSelect"></select>
+     <label>Search & Select Case (by Case Title, MACT No., Claimant, Mobile, Vehicle, etc.)</label>
+     <input type="text" id="hearingRecordSearch" placeholder="Type to filter cases..." style="margin-bottom:8px;">
+     <select id="hearingRecordSelect" size="5" style="height:auto; min-height:100px;"></select>
     </div>
 
     <div class="proceeding-grid">
@@ -401,7 +402,7 @@ let syncBusy = false;
 let cloudTimer = null;
 
 /* ============================================================
-   FIELD DEFINITIONS - ALL PROVIDED FIELDS
+   FIELD DEFINITIONS - WITH ENHANCED DROPDOWNS
    ============================================================ */
 
 const sections = [
@@ -412,16 +413,16 @@ const sections = [
   ["mactNo","MACT No.","text"],
   ["fileNumber","File Number","text"],
   ["courtName","Court Name","text"],
-  ["sections","Sections","text"],
-  ["accidentType","Accident Type","text"],
+  ["sections","Sections","select",["166 MV ACT", "140 MV ACT", "163A MV ACT", "OTHER"]],
+  ["accidentType","Accident Type","select",["INJURY", "FATAL", "PROPERTY DAMAGE"]],
   ["filingYear","Filing Year","number"],
-  ["filingMonth","Filing Month","text"],
+  ["filingMonth","Filing Month","select",["January","February","March","April","May","June","July","August","September","October","November","December"]],
   ["caseGivenBy","Case Given By","text"],
   ["clientFromOtherAdv","Client From Other Advocate","text"],
-  ["importanceLevel","Importance Level","text"],
+  ["importanceLevel","Importance Level","select",["Normal", "Important", "Urgent", "High Priority"]],
   ["presentation","Presentation","text"],
   ["accountName","Account Name","text"],
-  ["accountType","Account Type","text"],
+  ["accountType","Account Type","select",["Savings", "Current", "MACT Account", "Fixed Deposit"]],
   ["accountSite","Account Site","text"],
   ["cifNumber","CIF Number","text"],
   ["accountsNumbers","Accounts Numbers","text"],
@@ -431,7 +432,7 @@ const sections = [
   ["bankName","Bank Name","text"],
   ["bankBranchName","Bank Branch Name","text"],
   ["allClaimantsAccountDetail","All Claimants Account Detail","textarea","full"],
-  ["hpoAccountClosed","HPO Account Closed","text"],
+  ["hpoAccountClosed","HPO Account Closed","select",["NO", "YES"]],
   ["ifscHpoIppb","IFSC HPO / IPPB","text"],
   ["hpoIppbBranchName","HPO / IPPB Branch Name","text"]
  ]
@@ -461,7 +462,7 @@ const sections = [
   ["mobile3","Mobile 3","tel"],
   ["mobileNumGen","Mobile Number General","tel"],
   ["otherAddress","Other Address","textarea","full"],
-  ["isIncomeTaxPayee","Income Tax Payee","text"]
+  ["isIncomeTaxPayee","Income Tax Payee","select",["NO", "YES"]]
  ]
 },
 {
@@ -469,12 +470,12 @@ const sections = [
  fields:[
   ["accidentDate","Accident Date","date"],
   ["crimeNo","Crime No.","text"],
-  ["firOrGd","FIR / GD","text"],
+  ["firOrGd","FIR / GD","select",["FIR", "GD", "Both"]],
   ["gd","GD","text"],
   ["fir","FIR","text"],
   ["fr","FR","text"],
   ["vehicleNo","Vehicle Number","text"],
-  ["vehicleType","Vehicle Type","text"],
+  ["vehicleType","Vehicle Type","select",["Motor Cycle", "Car", "Truck", "Bus", "Auto Rickshaw", "Tractor", "Tempo", "Unknown"]],
   ["ownerName","Owner Name","text"],
   ["insuranceCo","Insurance Company","text"],
   ["insuranceDetails","Insurance Details","textarea","full"],
@@ -487,7 +488,7 @@ const sections = [
 {
  title:"4. ADVOCATES / REPRESENTATION",
  fields:[
-  ["claimantCouncil","Claimant Counsel","text"],
+  ["claimantCouncil","Claimant Council","text"],
   ["ownerAdvocate","Owner Advocate","text"],
   ["driverAdvocate","Driver Advocate","text"],
   ["insuranceAdvocate","Insurance Advocate","text"],
@@ -499,25 +500,25 @@ const sections = [
 {
  title:"5. DOCUMENTS / MEDICAL / DISABILITY",
  fields:[
-  ["photoCopyStatus","Photo Copy Status","text"],
-  ["fileStatusComplete","File Status Complete","text"],
-  ["certifiedCopiesStatus","Certified Copies Status","text"],
-  ["regCertificate","Registration Certificate","text"],
-  ["drivingLicense","Driving License","text"],
-  ["permit","Permit","text"],
-  ["fitness","Fitness","text"],
-  ["insuranceDoc","Insurance Document","text"],
-  ["pollution","Pollution","text"],
-  ["bailOrder","Bail Order","text"],
-  ["releaseOrder","Release Order","text"],
-  ["chargeSheet","Charge Sheet","text"],
-  ["injuryReport","Injury Report","text"],
-  ["punchnama","Punchnama","text"],
-  ["postMortem","Post Mortem","text"],
-  ["sitePlan","Site Plan","text"],
+  ["photoCopyStatus","Photo Copy Status","select",["Pending", "Received", "Complete"]],
+  ["fileStatusComplete","File Status Complete","select",["NO", "YES"]],
+  ["certifiedCopiesStatus","Certified Copies Status","select",["Pending", "Applied", "Received"]],
+  ["regCertificate","Registration Certificate","select",["Available", "Not Available", "Verified"]],
+  ["drivingLicense","Driving License","select",["Valid", "Invalid", "Fake", "Not Available"]],
+  ["permit","Permit","select",["Valid", "Invalid", "Not Available"]],
+  ["fitness","Fitness","select",["Valid", "Invalid", "Not Available"]],
+  ["insuranceDoc","Insurance Document","select",["Valid", "Fake", "Not Available"]],
+  ["pollution","Pollution","select",["Valid", "Invalid", "Not Available"]],
+  ["bailOrder","Bail Order","select",["Available", "Not Available"]],
+  ["releaseOrder","Release Order","select",["Available", "Not Available"]],
+  ["chargeSheet","Charge Sheet","select",["Submitted", "Pending"]],
+  ["injuryReport","Injury Report","select",["Available", "Not Available"]],
+  ["punchnama","Punchnama","select",["Available", "Not Available"]],
+  ["postMortem","Post Mortem","select",["Available", "Not Available"]],
+  ["sitePlan","Site Plan","select",["Available", "Not Available"]],
   ["disabilityPercentage","Disability Percentage","text"],
   ["disabilityNature","Disability Nature","text"],
-  ["disabilityCertificate","Disability Certificate","text"],
+  ["disabilityCertificate","Disability Certificate","select",["Available", "Not Available"]],
   ["disabilityCertNoDob","Disability Cert No / DOB","text"],
   ["disabilityValidityFrom","Disability Validity From","date"],
   ["disabilityValidityTill","Disability Validity Till","date"],
@@ -532,7 +533,7 @@ const sections = [
   ["kbFilingDate","KB Filing Date","date"],
   ["protestFilingDate","Protest Filing Date","date"],
   ["lowerCourtProtest","Lower Court Protest","text"],
-  ["isProtestPending","Is Protest Pending","text"],
+  ["isProtestPending","Is Protest Pending","select",["NO", "YES"]],
   ["miscNoProtest","Misc No. Protest","text"],
   ["nextDateProtest","Next Date Protest","date"],
   ["rplyFilingDate","Reply Filing Date","date"],
@@ -544,28 +545,28 @@ const sections = [
   ["atmClaimFilingDate","ATM Claim Filing Date","date"],
   ["labourCardFilingDate","Labour Card Filing Date","date"],
   ["compromiseFilingDate","Compromise Filing Date","date"],
-  ["compromiseStatus","Compromise Status","text"],
-  ["suggestLokAdalat","Suggest Lok Adalat","text"],
+  ["compromiseStatus","Compromise Status","select",["Pending", "Compromised", "Failed"]],
+  ["suggestLokAdalat","Suggest Lok Adalat","select",["NO", "YES"]],
   ["lokAdalatDocStatus","Lok Adalat Document Status","text"],
   ["lokAdalatDocsReq","Lok Adalat Documents Required","textarea","full"],
-  ["atmClaim","ATM Claim","text"],
-  ["bankClaim","Bank Claim","text"],
-  ["eShram","E-Shram","text"],
-  ["licInsurance","LIC Insurance","text"],
-  ["paOwnerDriver","PA Owner / Driver","text"],
-  ["labourCard","Labour Card","text"],
-  ["kisanBima","Kisan Bima","text"],
-  ["advanceGivenYesNo","Advance Given Yes / No","text"],
+  ["atmClaim","ATM Claim","select",["NO", "YES"]],
+  ["bankClaim","Bank Claim","select",["NO", "YES"]],
+  ["eShram","E-Shram","select",["NO", "YES"]],
+  ["licInsurance","LIC Insurance","select",["NO", "YES"]],
+  ["paOwnerDriver","PA Owner / Driver","select",["NO", "YES"]],
+  ["labourCard","Labour Card","select",["NO", "YES"]],
+  ["kisanBima","Kisan Bima","select",["NO", "YES"]],
+  ["advanceGivenYesNo","Advance Given Yes / No","select",["NO", "YES"]],
   ["advanceGivenDetails","Advance Given Details","textarea","full"],
   ["compensationAmount","Compensation Amount","text"],
   ["monthCompromise","Month Compromise","text"],
   ["yearCompromise","Year Compromise","number"],
   ["dateJudgementCompromise","Date Judgment / Compromise","date"],
-  ["bankCompromiseReceived","Bank Compromise Received","text"],
+  ["bankCompromiseReceived","Bank Compromise Received","select",["NO", "YES"]],
   ["ddRestoredDate","DD Restored Date","date"],
-  ["judgementStatus","Judgment Status","text"],
-  ["finalStatus","Final Status","text"],
-  ["hcAppealStatus","HC Appeal Status","text"],
+  ["judgementStatus","Judgment Status","select",["Pending", "Judgment Passed", "Compromised", "Dismissed"]],
+  ["finalStatus","Final Status","select",["Active", "Pending", "Closed", "Disposed"]],
+  ["hcAppealStatus","HC Appeal Status","select",["None", "Filed", "Pending", "Decided"]],
   ["fafoNumber","FAFO Number","text"],
   ["hcAppealBrief","HC Appeal Brief","textarea","full"],
   ["appealCaveatDate","Appeal Caveat Date","date"],
@@ -575,7 +576,7 @@ const sections = [
   ["lastActivityTime","Last Activity Time","text"],
   ["lastEnrichedTime","Last Enriched Time","text"],
   ["changeLogTime","Change Log Time","text"],
-  ["locked","Locked","text"],
+  ["locked","Locked","select",["NO", "YES"]],
   ["description","Description","textarea","full"],
   ["othersNotes","Others Notes","textarea","full"]
  ]
@@ -667,15 +668,20 @@ function renderForm(){
      <div class="form-grid">
   `;
   section.fields.forEach(field=>{
-   const [id,label,type,cls]=field;
+   const [id,label,type,optOrCls,clsParam]=field;
    let input="";
    if(type==="textarea"){
-    input=`<textarea id="${id}" name="${id}" ${cls==="full"?"":""}></textarea>`;
+    const fullCls = optOrCls==="full" || clsParam==="full" ? "full" : "";
+    input=`<textarea id="${id}" name="${id}"></textarea>`;
+   }else if(type==="select"){
+    const opts=Array.isArray(optOrCls)?optOrCls:[];
+    input=`<select id="${id}" name="${id}">${opts.map(o=>`<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join("")}</select>`;
    }else{
     input=`<input id="${id}" name="${id}" type="${type}" autocomplete="off">`;
    }
+   const isFull = (type==="textarea" && (optOrCls==="full" || clsParam==="full")) || clsParam==="full";
    html+=`
-    <div class="field ${cls==="full"?"full":""}">
+    <div class="field ${isFull?"full":""}">
      <label for="${id}">${escapeHtml(label)}</label>
      ${input}
     </div>
@@ -877,7 +883,6 @@ $("newFileForm").addEventListener("submit",async e=>{
  editingRecordId=null;
  toast(existing?"Record updated successfully.":"Record saved successfully.");
  await syncCloud();
- downloadWord(data);
 });
 
 function readFileAsDataURL(file){
@@ -1078,10 +1083,29 @@ function checkTodaysHearings(){
  `).join("");
 }
 
-function openHearingModal(id){
- $("hearingRecordSelect").innerHTML=records.map(r=>`
-  <option value="${escapeHtml(r.recordId)}" ${r.recordId===id?"selected":""}>${escapeHtml(r.caseTitle||r.claimantName||r.mactNo||"Untitled")}</option>
+function populateHearingSelect(filterText=""){
+ const select=$("hearingRecordSelect");
+ const query=filterText.toLowerCase().trim();
+ const filtered=records.filter(r=>{
+  if(!query)return true;
+  return JSON.stringify(r).toLowerCase().includes(query);
+ });
+ select.innerHTML=filtered.map(r=>`
+  <option value="${escapeHtml(r.recordId)}">${escapeHtml((r.caseTitle||"Untitled") + " | MACT: " + (r.mactNo||"—") + " | Claimant: " + (r.claimantName||"—") + " | Veh: " + (r.vehicleNo||"—"))}</option>
  `).join("");
+}
+
+$("hearingRecordSearch").addEventListener("input",e=>{
+ populateHearingSelect(e.target.value);
+});
+
+function openHearingModal(id){
+ $("hearingRecordSearch").value="";
+ populateHearingSelect();
+ if(id){
+  const sel=$("hearingRecordSelect");
+  sel.value=id;
+ }
  $("newProceedingDate").value=localDate();
  $("newNextDate").value="";
  $("newProceedingNotes").value="";
@@ -1096,7 +1120,7 @@ $("topAddDateBtn").addEventListener("click",()=>{
 $("addDateForm").addEventListener("submit",e=>{
  e.preventDefault();
  const r=getRecord($("hearingRecordSelect").value);
- if(!r)return;
+ if(!r){ toast("Please select a valid case record."); return; }
  if(!$("newNextDate").value){ toast("Please enter Next Date."); return; }
  if(!Array.isArray(r.proceedings))r.proceedings=[];
  r.proceedings.push({
@@ -1209,30 +1233,6 @@ $("importCsvInput").addEventListener("change",e=>{
  };
  reader.readAsText(file);
 });
-
-function downloadWord(record){
- let body=`<h1>MACT Case Record</h1><h2>${escapeHtml(record.caseTitle||"Untitled Case")}</h2><p><b>Case ID:</b> ${escapeHtml(record.recordId)}</p>`;
- sections.forEach(section=>{
-  body+=`<h3>${escapeHtml(section.title)}</h3><table>`;
-  section.fields.forEach(([id,label])=>{
-   const value=record[id];
-   body+=`<tr><td><b>${escapeHtml(label)}</b></td><td>${escapeHtml(value||"")}</td></tr>`;
-  });
-  body+=`</table>`;
- });
- body+=`<h3>Proceedings</h3><table><tr><th>Proceeding Date</th><th>Next Date</th><th>Notes</th></tr>`;
- (record.proceedings||[]).forEach(p=>{
-  body+=`<tr><td>${escapeHtml(formatDate(p.proceedingDate))}</td><td>${escapeHtml(formatDate(p.nextDate))}</td><td>${escapeHtml(p.notes||"")}</td></tr>`;
- });
- body+=`</table>`;
- const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;padding:30px}h1{color:#1e3a8a}table{width:100%;border-collapse:collapse;margin-bottom:20px}td,th{border:1px solid #bbb;padding:7px;text-align:left}td:first-child{width:30%;background:#f2f4f7}</style></head><body>${body}</body></html>`;
- const blob=new Blob(["\ufeff",html],{type:"application/msword"});
- downloadBlob(blob,`${sanitizeFilename(record.caseTitle||"MACT_Case")}.doc`);
-}
-
-function sanitizeFilename(name){
- return String(name).replace(/[\\/:*?"<>|]+/g,"_").slice(0,100);
-}
 
 function openPdf(id){
  const r=getRecord(id);
@@ -1367,9 +1367,6 @@ async function pullCloud(){
  }
 }
 
-/* ============================================================
-   RESTORE DELETED RECORDS FROM CLOUD (NO DUPLICATES)
-   ============================================================ */
 async function restoreFromCloud(){
  if(!navigator.onLine){
   toast("You are offline. Cannot restore from cloud.");
@@ -1395,12 +1392,10 @@ async function restoreFromCloud(){
 
   cloudRecords.forEach(cr=>{
    cr.recordId=cr.recordId||cr.timestamp||uid();
-   // Agar local mein record nahi hai (matlab delete ho gaya tha), toh usko map mein daal do
    if(!map.has(cr.recordId)){
     map.set(cr.recordId, cr);
     restoredCount++;
    } else {
-    // Agar pehle se hai, toh latest updatedAt wala rakho
     const local=map.get(cr.recordId);
     const lt=new Date(local.updatedAt||0).getTime();
     const ct=new Date(cr.updatedAt||0).getTime();
