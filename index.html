@@ -258,7 +258,7 @@ textarea{resize:vertical;min-height:70px}
 <script>
 "use strict";
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzZrSRDmqZktZfnD5E1ixU_iN6kWiSoiis6N4lVF8TPtg6WgIFt3UDus9yQGUZg_dqP/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyXcQaUuaMzkn0epZ4K2sRsEr1qBHmEOAco69eb0tHR6sp-y2kLvDTfwz8VebaUQrzQ/exec";
 
 const STORAGE_KEY = "mact_unlimited_records";
 const LAYOUT_STORAGE_KEY = "mact_form_sections_layout";
@@ -887,7 +887,7 @@ if(newFileForm){
   closeModal("newFileModal");
   editingRecordId = null;
   toast(existing ? "Record updated successfully." : "Record saved successfully.");
-  await syncCloud();
+  await syncCloud({showToast:true, force:true});
  };
 }
 
@@ -1312,178 +1312,273 @@ if($("printFilteredRecordsBtn")){
  };
 }
 
-async function syncCloud(){
- if(syncBusy) return;
- if(!navigator.onLine){
-  if($("syncStatus")) $("syncStatus").textContent = "☁ Offline - saved locally";
-  return;
- }
- syncBusy = true;
- if($("syncStatus")) $("syncStatus").textContent = "☁ Syncing...";
- try{
-  const latest = records[0] || {};
-  const payload = {
-   action: "backup",
-   records: records,
-   record: latest,
-   updatedAt: nowISO(),
-   source: "MACT Legal Portal"
-  };
-  Object.assign(payload, latest);
-  await fetch(APPS_SCRIPT_URL, {
-   method: "POST",
-   mode: "no-cors",
-   headers: { "Content-Type": "text/plain;charset=utf-8" },
-   body: JSON.stringify(payload)
-  });
-  cloudConnected = true;
-  localStorage.setItem("mact_cloud_connected", "1");
-  const time = new Date().toLocaleString();
-  localStorage.setItem("mact_last_sync", time);
-  if($("syncStatus")) $("syncStatus").textContent = "☁ Cloud Sync Active";
-  if($("lastSyncStatus")) $("lastSyncStatus").textContent = "Last Sync: " + time;
- }catch(err){
-  console.error("Cloud sync error:", err);
-  if($("syncStatus")) $("syncStatus").textContent = "☁ Sync failed - Local Safe";
- }finally{
-  syncBusy = false;
- }
-}
+async function cloudRequest(method="GET", payload=null){
+  const url = APPS_SCRIPT_URL + (method === "GET"
+    ? "?action=get&_=" + Date.now()
+    : "?_=" + Date.now());
 
-async function pullCloud(){
- if(!navigator.onLine){
-  toast("You are offline. Local records available.");
-  return;
- }
- if($("syncStatus")) $("syncStatus").textContent = "☁ Connecting...";
- try{
-  const response = await fetch(APPS_SCRIPT_URL + "?action=get&_=" + Date.now(), { method: "GET", cache: "no-store" });
+  const options = {
+    method,
+    cache: "no-store"
+  };
+
+  if(method !== "GET"){
+    options.headers = {"Content-Type":"text/plain;charset=utf-8"};
+    options.body = JSON.stringify(payload || {});
+  }
+
+  const response = await fetch(url, options);
+
+  if(!response.ok){
+    throw new Error("Cloud HTTP " + response.status);
+  }
+
   const text = await response.text();
   if(!text) throw new Error("Empty cloud response");
-  const data = JSON.parse(text);
-  let cloudRecords = Array.isArray(data) ? data : Array.isArray(data.records) ? data.records : [];
-  if(!cloudRecords.length){
-   cloudConnected = true;
-   toast("Cloud connected. No cloud records returned.");
-   updateConnectionUI();
-   return;
+
+  let data;
+  try{
+    data = JSON.parse(text);
+  }catch(e){
+    throw new Error("Invalid cloud JSON response");
   }
-  const map = new Map(records.map(r => [r.recordId, r]));
-  cloudRecords.forEach(cr => {
-   cr.recordId = cr.recordId || cr.timestamp || uid();
-   const local = map.get(cr.recordId);
-   if(!local){
-    map.set(cr.recordId, cr);
-   }else{
-    const lt = new Date(local.updatedAt || 0).getTime();
-    const ct = new Date(cr.updatedAt || 0).getTime();
-    if(ct > lt) map.set(cr.recordId, cr);
-   }
+
+  if(data && data.ok === false){
+    throw new Error(data.error || "Cloud operation failed");
+  }
+
+  return data;
+}
+
+function normalizeCloudRecords(data){
+  const list = Array.isArray(data)
+    ? data
+    : (data && Array.isArray(data.records) ? data.records : []);
+
+  return list.filter(Boolean).map(r => {
+    if(!r.recordId) r.recordId = r.timestamp || uid();
+    if(!r.updatedAt) r.updatedAt = r.createdAt || nowISO();
+    return r;
   });
-  records = [...map.values()];
-  saveLocal();
-  renderAll();
-  cloudConnected = true;
-  localStorage.setItem("mact_cloud_connected", "1");
-  const time = new Date().toLocaleString();
-  localStorage.setItem("mact_last_sync", time);
-  if($("syncStatus")) $("syncStatus").textContent = "☁ Cloud Sync Active";
-  if($("lastSyncStatus")) $("lastSyncStatus").textContent = "Last Sync: " + time;
-  toast("Cloud records synced.");
- }catch(err){
-  console.warn("Cloud pull unavailable:", err);
-  cloudConnected = true;
-  localStorage.setItem("mact_cloud_connected", "1");
-  updateConnectionUI();
-  toast("Cloud upload mode connected.");
- }
+}
+
+function mergeRecords(localRecords, cloudRecords){
+  const map = new Map();
+
+  (localRecords || []).forEach(r => {
+    if(!r) return;
+    const id = String(r.recordId || r.timestamp || uid());
+    r.recordId = id;
+    map.set(id, r);
+  });
+
+  (cloudRecords || []).forEach(r => {
+    if(!r) return;
+    const id = String(r.recordId || r.timestamp || uid());
+    r.recordId = id;
+
+    const local = map.get(id);
+    if(!local){
+      map.set(id, r);
+      return;
+    }
+
+    const lt = new Date(local.updatedAt || local.createdAt || 0).getTime();
+    const ct = new Date(r.updatedAt || r.createdAt || 0).getTime();
+
+    if(ct >= lt){
+      map.set(id, r);
+    }
+  });
+
+  return [...map.values()];
+}
+
+async function syncCloud(options={}){
+  if(syncBusy && !options.force) return false;
+
+  if(!navigator.onLine){
+    if($("syncStatus")) $("syncStatus").textContent = "☁ Offline - saved locally";
+    return false;
+  }
+
+  syncBusy = true;
+  if($("syncStatus")) $("syncStatus").textContent = "☁ Syncing to Google Drive...";
+
+  try{
+    const payload = {
+      action: "backup",
+      records: records,
+      updatedAt: nowISO(),
+      source: "MACT Legal Portal",
+      appVersion: "2026.09"
+    };
+
+    const data = await cloudRequest("POST", payload);
+
+    cloudConnected = true;
+    localStorage.setItem("mact_cloud_connected", "1");
+
+    const time = new Date().toLocaleString();
+    localStorage.setItem("mact_last_sync", time);
+
+    if($("syncStatus")) $("syncStatus").textContent = "☁ Google Drive Sync Active";
+    if($("lastSyncStatus")) $("lastSyncStatus").textContent = "Last Sync: " + time;
+
+    if(data && data.fileName){
+      localStorage.setItem("mact_cloud_file_name", data.fileName);
+    }
+
+    if(options.showToast !== false){
+      toast(`✓ ${records.length} record(s) saved to Google Drive.`);
+    }
+
+    return true;
+  }catch(err){
+    console.error("Cloud sync error:", err);
+    if($("syncStatus")) $("syncStatus").textContent = "☁ Sync failed - Local Safe";
+    if(options.showToast !== false){
+      toast("Google Drive sync failed. Data is still saved locally.");
+    }
+    return false;
+  }finally{
+    syncBusy = false;
+  }
+}
+
+async function pullCloud(options={}){
+  if(!navigator.onLine){
+    if(options.showToast !== false) toast("You are offline. Local records available.");
+    return false;
+  }
+
+  if($("syncStatus")) $("syncStatus").textContent = "☁ Loading Google Drive data...";
+
+  try{
+    const data = await cloudRequest("GET");
+    const cloudRecords = normalizeCloudRecords(data);
+
+    if(cloudRecords.length){
+      records = mergeRecords(records, cloudRecords);
+      saveLocal();
+      renderAll();
+
+      cloudConnected = true;
+      localStorage.setItem("mact_cloud_connected", "1");
+
+      const time = new Date().toLocaleString();
+      localStorage.setItem("mact_last_sync", time);
+
+      if($("syncStatus")) $("syncStatus").textContent = "☁ Google Drive Sync Active";
+      if($("lastSyncStatus")) $("lastSyncStatus").textContent = "Last Sync: " + time;
+
+      if(options.showToast !== false){
+        toast(`✓ ${cloudRecords.length} cloud record(s) loaded.`);
+      }
+      return true;
+    }
+
+    cloudConnected = true;
+    localStorage.setItem("mact_cloud_connected", "1");
+
+    if($("syncStatus")) $("syncStatus").textContent = "☁ Google Drive Connected";
+
+    // IMPORTANT: if this is a brand-new Drive backup but this browser has
+    // local records, upload them so the cloud becomes the shared source.
+    if(records.length && options.uploadLocalIfCloudEmpty !== false){
+      return await syncCloud({showToast: options.showToast !== false, force:true});
+    }
+
+    if(options.showToast !== false) toast("Google Drive connected. No cloud records found.");
+    return true;
+
+  }catch(err){
+    console.error("Cloud pull error:", err);
+    if($("syncStatus")) $("syncStatus").textContent = "☁ Cloud unavailable - Local Safe";
+    if(options.showToast !== false){
+      toast("Could not load Google Drive data. Check Apps Script deployment.");
+    }
+    return false;
+  }
 }
 
 async function restoreFromCloud(){
- if(!navigator.onLine){
-  toast("You are offline. Cannot restore from cloud.");
-  return;
- }
- toast("Restoring deleted records from cloud...");
- try{
-  const response = await fetch(APPS_SCRIPT_URL + "?action=get&_=" + Date.now(), { method: "GET", cache: "no-store" });
-  const text = await response.text();
-  if(!text){
-   toast("No records found in cloud backup.");
-   return;
-  }
-  const data = JSON.parse(text);
-  let cloudRecords = Array.isArray(data) ? data : Array.isArray(data.records) ? data.records : [];
-  if(!cloudRecords.length){
-   toast("Cloud backup is empty.");
-   return;
+  if(!navigator.onLine){
+    toast("You are offline. Cannot restore from cloud.");
+    return;
   }
 
-  const map = new Map(records.map(r => [r.recordId, r]));
-  let restoredCount = 0;
+  toast("Restoring data from Google Drive...");
 
-  cloudRecords.forEach(cr => {
-   cr.recordId = cr.recordId || cr.timestamp || uid();
-   if(!map.has(cr.recordId)){
-    map.set(cr.recordId, cr);
-    restoredCount++;
-   }else{
-    const local = map.get(cr.recordId);
-    const lt = new Date(local.updatedAt || 0).getTime();
-    const ct = new Date(cr.updatedAt || 0).getTime();
-    if(ct > lt){
-     map.set(cr.recordId, cr);
+  try{
+    const data = await cloudRequest("GET");
+    const cloudRecords = normalizeCloudRecords(data);
+
+    if(!cloudRecords.length){
+      toast("Google Drive backup is empty.");
+      return;
     }
-   }
-  });
 
-  records = [...map.values()];
-  saveLocal();
-  renderAll();
+    const before = records.length;
+    records = mergeRecords(records, cloudRecords);
+    saveLocal();
+    renderAll();
 
-  if(restoredCount > 0){
-   toast(`Successfully restored ${restoredCount} deleted record(s) without duplicates!`);
-  }else{
-   toast("All cloud records are already present locally. No new deleted records found.");
+    const added = Math.max(0, records.length - before);
+    toast(`✓ Cloud restore complete. ${added} new record(s) restored; latest versions merged.`);
+  }catch(err){
+    console.error("Restore error:", err);
+    toast("Restore failed. Check Google Apps Script deployment.");
   }
- }catch(err){
-  console.error("Restore error:", err);
-  toast("Failed to restore. Ensure Apps Script GET action is supported.");
- }
 }
 
 if($("restoreCloudBtn")) $("restoreCloudBtn").onclick = restoreFromCloud;
 
 async function connectCloud(){
- cloudConnected = true;
- localStorage.setItem("mact_cloud_connected", "1");
- updateConnectionUI();
- toast("Connecting to Apps Script cloud...");
- await pullCloud();
- if(records.length){ await syncCloud(); }
+  cloudConnected = true;
+  localStorage.setItem("mact_cloud_connected", "1");
+  updateConnectionUI();
+  toast("Connecting to Google Drive...");
+
+  const loaded = await pullCloud({showToast:false, uploadLocalIfCloudEmpty:false});
+
+  if(loaded){
+    toast("✓ Google Drive connected and data loaded.");
+  }else{
+    toast("Google Drive connection failed. Local data remains safe.");
+  }
 }
 
 if($("googleLoginBtn")) $("googleLoginBtn").onclick = connectCloud;
 
 function updateConnectionUI(){
- const el = $("connectionStatus");
- if(!el) return;
- if(navigator.onLine){
-  el.textContent = "● Online";
-  el.className = "status online";
- }else{
-  el.textContent = "● Offline";
-  el.className = "status offline";
- }
- if(cloudConnected && $("syncStatus")){
-  $("syncStatus").textContent = navigator.onLine ? "☁ Cloud Sync Active" : "☁ Offline - Local Safe";
- }
+  const el = $("connectionStatus");
+  if(!el) return;
+
+  if(navigator.onLine){
+    el.textContent = "● Online";
+    el.className = "status online";
+  }else{
+    el.textContent = "● Offline";
+    el.className = "status offline";
+  }
+
+  if(cloudConnected && $("syncStatus")){
+    $("syncStatus").textContent = navigator.onLine
+      ? "☁ Google Drive Sync Active"
+      : "☁ Offline - Local Safe";
+  }
 }
 
-window.addEventListener("online", () => {
- updateConnectionUI();
- if(cloudConnected) syncCloud();
+window.addEventListener("online", async () => {
+  updateConnectionUI();
+  if(cloudConnected){
+    await pullCloud({showToast:false, uploadLocalIfCloudEmpty:true});
+  }else{
+    await pullCloud({showToast:false, uploadLocalIfCloudEmpty:true});
+  }
 });
+
 window.addEventListener("offline", updateConnectionUI);
 
 function updateStats(){
@@ -1514,21 +1609,34 @@ function renderAll(){
  if($("lastSyncStatus")) $("lastSyncStatus").textContent = "Last Sync: " + (last || "Never");
 }
 
-function initializeApp(){
+async function initializeApp(){
  loadLocal();
  renderForm();
  renderProceedings([]);
  renderAll();
- if(localStorage.getItem("mact_cloud_connected") === "1"){
-  cloudConnected = true;
-  updateConnectionUI();
-  setTimeout(()=>{ if(navigator.onLine) pullCloud(); }, 1000);
-  cloudTimer = setInterval(()=>{
-   if(cloudConnected && navigator.onLine){ syncCloud(); }
-  }, 60000);
+
+ // Always try the shared cloud first. This is the key fix for a new
+ // browser/device: localStorage is browser-specific and cannot carry
+ // records from another browser.
+ cloudConnected = true;
+ updateConnectionUI();
+
+ if(navigator.onLine){
+   await pullCloud({
+     showToast:false,
+     uploadLocalIfCloudEmpty:true
+   });
  }else{
-  updateConnectionUI();
+   cloudConnected = false;
+   updateConnectionUI();
  }
+
+ cloudTimer = setInterval(()=>{
+   if(navigator.onLine && cloudConnected){
+     syncCloud({showToast:false, force:true});
+   }
+ }, 60000);
+
  const openNewBtn = $("openNewFileModalBtn");
  if(openNewBtn) openNewBtn.onclick = openNewRecord;
  if(!records.length && $("topAddDateBtn")){ $("topAddDateBtn").disabled = false; }
