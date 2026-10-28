@@ -470,6 +470,7 @@ body.mact-dark .v7-command-kbd{border-color:#33425d}
 <div class="card">
  <h2 style="margin:0 0 10px;font-size:16px">📅 Today & Upcoming Hearings (<span id="todayCount">0</span>)</h2>
  <div id="hearingList" style="max-height:250px;overflow-y:auto"><div class="adv-panel" style="text-align:center;padding:20px">No hearings recorded yet. <button type="button" class="btn btn-warning btn-sm" style="margin-left:6px" onclick="document.getElementById('topAddDateBtn').click()">＋ Add Hearing</button></div></div>
+ <div style="margin-top:18px;padding-top:14px;border-top:2px solid #fee2e2"><h3 style="margin:0 0 8px;color:#b91c1c;font-size:15px">⏰ Pending Dates — date passed, next date not updated (<span id="overdueHearingCount">0</span>)</h3><p style="margin:0 0 8px;font-size:11px;color:#64748b">यहाँ केवल उन केसों की मौजूदा Next Hearing Date दिखाई जाएगी जो निकल चुकी है और जिनमें नई तारीख अपडेट नहीं हुई है।</p><div id="overdueHearingList"><div class="empty-state" style="padding:12px">No overdue pending dates.</div></div></div>
  <div style="margin-top:10px">
   <button type="button" class="btn btn-light btn-sm" id="printTodayHearingsBtn">🖨️ Print Hearing List</button>
  </div>
@@ -2213,8 +2214,11 @@ function openPdf(id){
 function openPrintWindow(title, content){
  const win = window.open("", "_blank");
  if(!win){ toast("Please allow popups for printing."); return; }
- win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>body{font-family:Arial,sans-serif;padding:25px;color:#111}h1{color:#1e3a8a}table{width:100%;border-collapse:collapse}th,td{border:1px solid #aaa;padding:7px;text-align:left;font-size:12px}th{background:#eee}@media print{button{display:none}}</style></head><body> ${content}<script>window.onload=function(){window.print()}<\/script>\n</body></html>`);
+ win.document.open();
+ win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>body{font-family:Arial,sans-serif;padding:25px;color:#111}h1{color:#1e3a8a}table{width:100%;border-collapse:collapse}th,td{border:1px solid #aaa;padding:7px;text-align:left;font-size:12px}th{background:#eee}@media print{button{display:none}}</style></head><body>${content}</body></html>`);
  win.document.close();
+ win.focus();
+ win.addEventListener("load",()=>{ try { win.print(); } catch(e){} }, {once:true});
 }
 
 function printRecord(id){
@@ -4296,5 +4300,419 @@ body.mact-dark #m144Health{background:#111b2e;border-color:#26334a}body.mact-dar
      Changes: native form POST, delayed Drive verification, resilient JSONP retry,
      local-file crypto fallback, and automatic retry-friendly status handling.
 -->
-\n</body>
+
+
+<!-- MACT PROFESSIONAL PAGE-NAVIGATION PATCH
+     Keeps the existing record model and handlers; changes navigation/view separation only. -->
+<style id="mact-page-navigation-patch">
+.mact-route-panel{display:none!important}
+.mact-route-panel.mact-route-active{display:block!important}
+.mact-main .mact-route-panel.mact-route-active.mact-kpi-grid{display:grid!important}
+.mact-main .mact-route-panel.mact-route-active.mact-inline-flex{display:flex!important}
+.mact-page-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin:4px 0 18px}
+.mact-page-heading h2{margin:0;color:var(--office-navy);font-size:23px}
+.mact-page-heading p{margin:5px 0 0;color:var(--office-muted);font-size:12px}
+.mact-page-card{background:var(--office-card);border:1px solid var(--office-line);border-radius:16px;padding:20px;box-shadow:0 8px 25px rgba(15,23,42,.055);margin:16px 0}
+.mact-page-card h3{margin:0 0 12px;color:var(--office-navy);font-size:15px}
+.mact-page-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.mact-page-tile{border:1px solid var(--office-line);border-radius:13px;background:var(--office-bg);padding:15px;text-align:left;cursor:pointer;color:var(--office-text)}
+.mact-page-tile strong{display:block;font-size:13px;margin-bottom:5px}.mact-page-tile span{font-size:11px;color:var(--office-muted)}
+.mact-page-tile:hover{border-color:#aabbd5;transform:translateY(-1px)}
+.mact-breadcrumb{display:flex;align-items:center;gap:8px;margin:12px 0;color:var(--office-muted);font-size:11px}
+.mact-detail-fullpage.show{display:block!important;position:fixed!important;inset:0!important;z-index:10050!important;padding:0!important;overflow:auto!important;background:var(--office-bg)!important;backdrop-filter:none!important}
+.mact-detail-fullpage .modal-content{width:100%!important;max-width:none!important;min-height:100vh!important;max-height:none!important;border-radius:0!important;padding:22px clamp(14px,3vw,42px)!important;overflow:visible!important}
+.mact-detail-fullpage .mact-detail-back{margin-right:auto}
+.mact-main .mact-route-panel table{max-width:100%}
+@media(max-width:760px){.mact-page-heading h2{font-size:20px}.mact-page-card{padding:14px}.mact-detail-fullpage .modal-content{padding:14px!important}.mact-detail-fullpage .modal-content>div:first-child{align-items:flex-start!important;flex-wrap:wrap}}
+</style>
+<script id="mact-page-navigation-engine">
+(function(){
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ const activeRecords=()=>Array.isArray(window.MACT?.records)?window.MACT.records.filter(r=>!r.deleted&&!r.deletedAt):[];
+ const safeText=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ function markPanel(el,page,extra){if(!el)return;el.classList.add('mact-route-panel');el.dataset.mactPage=page;if(extra)el.classList.add(extra);}
+ function ensurePage(id,title,subtitle,html){
+   let el=$('mact-page-'+id);if(el)return el;
+   el=document.createElement('section');el.id='mact-page-'+id;el.className='mact-page-card mact-route-panel';el.dataset.mactPage=id;
+   el.innerHTML='<div class="mact-page-heading"><div><h2>'+title+'</h2><p>'+subtitle+'</p></div><button class="btn btn-light" type="button" data-mact-back="dashboard">← Dashboard</button></div>'+html;
+   const main=document.querySelector('.mact-main');const firstModal=$('newFileModal');
+   if(main)main.insertBefore(el,firstModal||null);
+   return el;
+ }
+ function setupPages(){
+   markPanel($('dashboard'),'dashboard');
+   const stats=document.querySelector('.stats-grid');markPanel(stats,'cases','mact-kpi-grid');
+   markPanel($('cases'),'cases');markPanel($('advancedControlCard'),'cases');
+   const hearing=$('hearingList')?.closest('.card');markPanel(hearing,'hearings');
+   markPanel($('mactClientsSection'),'clients');
+   document.querySelectorAll('.premium-welcome').forEach(x=>markPanel(x,'dashboard'));
+   // Keep duplicate KPI cards and the case register out of the dashboard view.
+   ensurePage('documents','Documents','Open the document workspace for a selected case.','<div class="mact-page-grid"><div class="field"><label>Select case file</label><select id="mactDocumentsCase" style="margin-top:6px"><option value="">Choose a case…</option></select></div><button type="button" class="mact-page-tile" id="mactOpenDocuments"><strong>▧ Open case documents</strong><span>View, add or manage documents for the selected file.</span></button></div><div class="mact-page-card" style="margin-bottom:0"><h3>Document workflow</h3><p style="font-size:12px;color:var(--office-muted);margin:0">Select a case and open its document panel. Case-specific documents remain inside that case rather than appearing on the dashboard.</p></div>');
+   ensurePage('petitions','Petitions & Drafting','Generate a petition or open the existing drafting workspace.','<div class="mact-page-grid"><button type="button" class="mact-page-tile" id="mactGeneratePetition"><strong>§ Generate petition</strong><span>Choose a case and prepare the petition using the existing form.</span></button><button type="button" class="mact-page-tile" id="mactDraftStudio"><strong>✎ Draft studio</strong><span>Open the built-in draft templates and case-based drafting tools.</span></button></div>');
+   ensurePage('reports','Reports & Analytics','Case distribution, workload and reporting tools.','<div class="mact-page-grid"><button type="button" class="mact-page-tile" id="mactOpenAnalytics"><strong>◒ Open analytics</strong><span>Detailed case analytics and status overview.</span></button><button type="button" class="mact-page-tile" id="mactPrintRegister"><strong>▣ Print case register</strong><span>Print the current case list or filtered register.</span></button><button type="button" class="mact-page-tile" id="mactExportRegister"><strong>⇩ Export CSV</strong><span>Export case records for spreadsheet reporting.</span></button></div><div class="mact-page-card"><h3>Current case summary</h3><div id="mactReportSummary" class="mact-page-grid"></div></div>');
+   ensurePage('backup','Backup & Restore','Create a local backup, restore a previous backup, or check data health.','<div class="mact-page-grid"><button type="button" class="mact-page-tile" id="mactOpenBackup"><strong>💾 Backup & restore</strong><span>Open existing backup and restore controls.</span></button><button type="button" class="mact-page-tile" id="mactFullBackup"><strong>⇩ Full backup</strong><span>Download a backup using the installed backup utility.</span></button><button type="button" class="mact-page-tile" id="mactOpenRecycle"><strong>♻ Recycle bin</strong><span>Restore deleted case files.</span></button><button type="button" class="mact-page-tile" id="mactDataHealth"><strong>✓ Data health</strong><span>Inspect and repair record IDs using the available utility.</span></button></div>');
+   ensurePage('recycle','Recycle Bin','Restore deleted case files or permanently manage them in the recycle-bin workspace.','<div class="mact-page-grid"><button type="button" class="mact-page-tile" id="mactRecycleOpen"><strong>♻ Open recycle bin</strong><span>View deleted records and restore them.</span></button><button type="button" class="mact-page-tile" data-mact-back="cases"><strong>▤ Back to case files</strong><span>Return to the active case register.</span></button></div>');
+   // Make the detail view a full page instead of a small floating popup.
+   const detail=$('fileDetailModal');if(detail){detail.classList.add('mact-detail-fullpage');const head=detail.querySelector('.modal-content>div:first-child');if(head&&!head.querySelector('.mact-detail-back')){const back=document.createElement('button');back.type='button';back.className='btn btn-light btn-sm mact-detail-back';back.textContent='← Back to Case Files';back.onclick=()=>{if(typeof closeModal==='function')closeModal('fileDetailModal');else detail.classList.remove('show');go('cases')};head.insertBefore(back,head.firstChild);}}
+   // Other major workspaces are full-screen page views too, while preserving their existing handlers.
+   ['documentsModal','analyticsModal','backupModal','recycleBinModal','petitionModal','duplicatesModal','bulkEditModal'].forEach(id=>{const m=$(id);if(m)m.classList.add('mact-detail-fullpage')});
+   populateDocumentCases();renderReportSummary();
+ }
+ function populateDocumentCases(){const sel=$('mactDocumentsCase');if(!sel)return;const prior=sel.value;const rs=activeRecords();sel.innerHTML='<option value="">Choose a case…</option>'+rs.map(r=>'<option value="'+safeText(r.recordId)+'">'+safeText(r.caseTitle||r.claimantName||'Untitled Case')+' — '+safeText(r.mactNo||r.recordId||'')+'</option>').join('');if(rs.some(r=>String(r.recordId)===prior))sel.value=prior;}
+ function renderReportSummary(){const box=$('mactReportSummary');if(!box)return;const rs=activeRecords();const today=typeof localDate==='function'?localDate():new Date().toISOString().slice(0,10);const hearings=rs.reduce((n,r)=>n+(r.proceedings||[]).filter(p=>p.nextDate&&p.nextDate>=today).length,0);const disposed=rs.filter(r=>/disposed|closed|settled/i.test(String(r.finalStatus||r.judgementStatus||''))).length;const judgment=rs.filter(r=>/judg|award/i.test(String(r.finalStatus||r.judgementStatus||''))).length;box.innerHTML=[['Active cases',rs.length],['Upcoming hearings',hearings],['Disposed',disposed],['Judgments / awards',judgment]].map(([k,v])=>'<div class="mact-kpi"><div class="mact-kpi-label">'+k+'</div><div class="mact-kpi-value">'+v+'</div></div>').join('');}
+ function go(id){
+   const aliases={dashboard:'dashboard',cases:'cases','case-files':'cases',hearings:'hearings','hearings-calendar':'hearings',clients:'clients','documents':'documents','petitions':'petitions','reports':'reports','analytics':'reports','backup':'backup','recycle':'recycle','recycle-bin':'recycle'};
+   id=aliases[id]||id;
+   const valid=['dashboard','cases','hearings','clients','documents','petitions','reports','backup','recycle'];if(!valid.includes(id))id='dashboard';
+   document.body.dataset.mactPage=id;
+   document.querySelectorAll('.mact-route-panel').forEach(el=>{el.classList.toggle('mact-route-active',el.dataset.mactPage===id)});
+   document.querySelectorAll('.mact-nav button').forEach(b=>b.classList.remove('active'));
+   const map={dashboard:'dashboard',cases:'case files',hearings:'hearings',clients:'clients / claimants',documents:'documents',petitions:'petitions',reports:'reports & analytics',backup:'backup & restore',recycle:'recycle bin'};
+   const match=[...document.querySelectorAll('.mact-nav button')].find(b=>b.textContent.toLowerCase().includes(map[id]||id));if(match)match.classList.add('active');
+   if(id==='clients'&&typeof window.renderClients==='function')window.renderClients();
+   if(id==='cases'&&typeof window.renderTable==='function')window.renderTable();
+   if(id==='documents')populateDocumentCases();if(id==='reports')renderReportSummary();
+   window.scrollTo({top:0,behavior:'smooth'});
+   try{history.replaceState(null,'','#'+id)}catch(e){}
+ }
+ window.mactGo=go;
+ window.mactOpen=function(id){
+   if(id==='documentsBtn'||id==='documents'){go('documents');return}
+   if(id==='analyticsBtn'||id==='caseAnalyticsBtn'||id==='analytics'){go('reports');return}
+   if(id==='backupBtn'||id==='backup'){go('backup');return}
+   if(id==='generatePetitionBtn'||id==='petitions'){go('petitions');return}
+   if(id==='recycleBinBtn'||id==='recycleBinModal'){go('recycle');return}
+   if(id==='printFilteredRecordsBtn'){go('reports');setTimeout(()=>$('printFilteredRecordsBtn')?.click(),0);return}
+   const el=$(id);if(el&&typeof el.click==='function'){el.click();return}
+   go('dashboard');
+ };
+ document.addEventListener('click',e=>{
+   const back=e.target.closest('[data-mact-back]');if(back){go(back.dataset.mactBack);return}
+ });
+ document.addEventListener('DOMContentLoaded',()=>{
+   setupPages();
+   // Sidebar tools route to a dedicated page; modal actions remain available from that page.
+   const nav=[...document.querySelectorAll('.mact-nav button')];
+   nav.forEach(b=>{const t=b.textContent.toLowerCase();if(t.includes('petitions'))b.onclick=()=>go('petitions');else if(t.includes('documents'))b.onclick=()=>go('documents');else if(t.includes('reports'))b.onclick=()=>go('reports');else if(t.includes('backup'))b.onclick=()=>go('backup');else if(t.includes('recycle'))b.onclick=()=>go('recycle')});
+   $('mactOpenDocuments')?.addEventListener('click',()=>{const id=$('mactDocumentsCase')?.value;if(!id){if(typeof toast==='function')toast('Please select a case first.');return}if(typeof openDocs==='function')openDocs(id);else if(typeof mactOpen==='function')mactOpen('documentsBtn')});
+   $('mactGeneratePetition')?.addEventListener('click',()=>{const el=$('generatePetitionBtn');if(el)el.click();else if(typeof toast==='function')toast('Petition tool is not available in this build.')});
+   $('mactDraftStudio')?.addEventListener('click',()=>{const b=$('m12GenerateDraft');if(b){$('m12-draft')?.scrollIntoView({behavior:'smooth'});b.closest('.m12-page')?.classList.add('active')}else if(typeof toast==='function')toast('Draft Studio is not available in this build.')});
+   $('mactOpenAnalytics')?.addEventListener('click',()=>{const b=$('caseAnalyticsBtn')||$('analyticsBtn');if(b)b.click();else if(typeof openAnalytics==='function')openAnalytics();else if(typeof toast==='function')toast('Analytics tool is not available in this build.')});
+   $('mactPrintRegister')?.addEventListener('click',()=>{go('cases');setTimeout(()=>$('printFilteredRecordsBtn')?.click(),100)});
+   $('mactExportRegister')?.addEventListener('click',()=>{go('cases');setTimeout(()=>$('exportCsvBtn')?.click(),100)});
+   $('mactOpenBackup')?.addEventListener('click',()=>{const b=$('backupBtn');if(b)b.click();else if(typeof toast==='function')toast('Backup controls are not available in this build.')});
+   $('mactFullBackup')?.addEventListener('click',()=>{const b=$('m144Backup')||$('backupBtn');if(b)b.click();else if(typeof toast==='function')toast('Use Backup & Restore to create a backup.')});
+   $('mactOpenRecycle')?.addEventListener('click',()=>go('recycle'));
+   $('mactRecycleOpen')?.addEventListener('click',()=>{const b=$('recycleBinBtn');if(b)b.click();else if(typeof toast==='function')toast('Recycle Bin control is not available in this build.')});
+   $('mactDataHealth')?.addEventListener('click',()=>{const b=$('m144HealthBtn');if(b)b.click();else if(typeof toast==='function')toast('Data Health utility is not available in this build.')});
+   // Keep individual file names and claimant details off the dashboard; show only a route to the hearings page.
+   const hideDashboardRows=()=>{const h=$('dashHearings');if(h)h.innerHTML='<div style="padding:14px 0;color:var(--office-muted);font-size:12px">Case-wise hearing details are available in the Hearings & Calendar page.</div><button type="button" class="btn btn-light btn-sm" id="mactDashViewHearings">Open Hearings & Calendar →</button>';const b=$('mactDashViewHearings');if(b)b.onclick=()=>go('hearings')};
+   hideDashboardRows();setInterval(hideDashboardRows,1200);
+   // KPI cards and dashboard hearing items become useful navigation targets.
+   const kpis=document.querySelectorAll('#dashboard .mact-kpi');kpis.forEach((el,i)=>{el.style.cursor='pointer';el.setAttribute('role','button');el.tabIndex=0;const route=i===1?'hearings':'cases';el.addEventListener('click',()=>go(route));el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go(route)}})});
+   // Any click on a case title in claimant cards opens the full-page case detail.
+   document.body.dataset.mactPage='dashboard';go(location.hash.replace('#','')||'dashboard');
+   const refresh=()=>{populateDocumentCases();renderReportSummary()};setInterval(refresh,3000);
+ },{once:true});
+})();
+</script>
+<style id="mact-data-safety-patch-css">
+#mact-page-hearing-history .mact-history-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+#mact-page-hearing-history .mact-history-toolbar input,#mact-page-hearing-history .mact-history-toolbar select{min-height:38px;border:1px solid #cbd5e1;border-radius:9px;padding:8px;background:#fff;flex:1;min-width:180px}
+.mact-history-item{border:1px solid #dbe4ef;border-radius:12px;padding:12px;margin:8px 0;background:#fff}
+.mact-history-item .meta{font-size:11px;color:#64748b;margin-top:5px;line-height:1.6}
+.mact-safety-badge{display:inline-block;border-radius:999px;padding:3px 8px;background:#eff6ff;color:#1d4ed8;font-size:10px;font-weight:700}
+#mact-page-hearing-history .mact-history-empty{padding:18px;border:1px dashed #cbd5e1;border-radius:12px;color:#64748b;text-align:center}
+@media(max-width:700px){#mact-page-hearing-history .mact-history-toolbar{display:grid;grid-template-columns:1fr}#mact-page-hearing-history .mact-history-toolbar input,#mact-page-hearing-history .mact-history-toolbar select{width:100%}}
+</style>
+<script id="mact-data-safety-patch">
+(function(){
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ const clone=x=>JSON.parse(JSON.stringify(x));
+ const now=()=>new Date().toISOString();
+ const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const active=r=>r&&!r.deleted&&!r.deletedAt;
+ const allRecords=()=>Array.isArray(window.MACT?.records)?window.MACT.records:[];
+ const id=()=>window.crypto?.randomUUID?crypto.randomUUID():('H-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,9));
+ const dateLabel=s=>{if(!s)return '—';const p=String(s).split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:s};
+ const addEvent=(p,action,details={})=>{p.history=Array.isArray(p.history)?p.history:[];p.history.push({eventId:id(),action,at:now(),details:clone(details)});};
+ const normalizeProceeding=p=>{p=p&&typeof p==='object'?p:{};if(!p.proceedingId)p.proceedingId=id();if(!Array.isArray(p.history))p.history=[];if(!p.status)p.status='scheduled';return p};
+ const baselineByRecord=new Map();
+ let originalGo=null;
+
+ function initializeHistoryFields(){
+   allRecords().forEach(r=>{if(!Array.isArray(r.proceedings))r.proceedings=[];r.proceedings.forEach(p=>{normalizeProceeding(p);if(!p.history.length)p.history.push({eventId:id(),action:'existing-record',at:r.createdAt||r.updatedAt||now(),details:{proceedingDate:p.proceedingDate||'',nextDate:p.nextDate||'',notes:p.notes||'',reason:'Existing record baseline'}});});});
+   try{window.MACT?.saveLocal?.()}catch(e){}
+ }
+
+ // Keep the original cloud-sync code and controls untouched. This patch only adds record-level safety.
+ if(typeof window.editRecord==='function'){
+   const oldEdit=window.editRecord;
+   window.editRecord=function(recordId){const r=allRecords().find(x=>String(x.recordId)===String(recordId));if(r)baselineByRecord.set(String(recordId),{updatedAt:r.updatedAt||'',snapshot:JSON.stringify(r)});return oldEdit.apply(this,arguments)};
+ }
+
+ // Every proceeding gets a stable ID; editing it preserves the previous version in its own history.
+ if(typeof getProceedingsFromForm==='function' && typeof addProceedingFormRow==='function'){
+   const oldAdd=addProceedingFormRow;
+   addProceedingFormRow=function(data={}){data=Object.assign({},data);normalizeProceeding(data);oldAdd(data);const box=$('proceedingsContainer');const row=box?.lastElementChild;if(row?.classList.contains('proceeding'))row.dataset.proceedingId=data.proceedingId;};
+   getProceedingsFromForm=function(){
+     const existing=editingRecordId?allRecords().find(r=>String(r.recordId)===String(editingRecordId)):null;
+     const oldList=Array.isArray(existing?.proceedings)?existing.proceedings:[];
+     const oldById=new Map(oldList.map(p=>[String(normalizeProceeding(p).proceedingId),p]));
+     const rows=[...document.querySelectorAll('#proceedingsContainer .proceeding[data-row]')];
+     const out=[],kept=new Set();
+     rows.forEach(row=>{
+       const pid=row.dataset.proceedingId||id();
+       const previous=oldById.get(String(pid));
+       const current={proceedingId:pid,proceedingDate:row.querySelector('.p-date')?.value||'',nextDate:row.querySelector('.p-next')?.value||'',notes:row.querySelector('.p-notes')?.value||'',status:previous?.status||'scheduled',history:Array.isArray(previous?.history)?clone(previous.history):[]};
+       if(previous){
+         const changed=['proceedingDate','nextDate','notes'].some(k=>String(previous[k]||'')!==String(current[k]||''));
+         if(changed){addEvent(current,'edited',{previous:{proceedingDate:previous.proceedingDate||'',nextDate:previous.nextDate||'',notes:previous.notes||''},reason:'Updated from case record form'});current.status='scheduled';}
+         kept.add(String(pid));
+       }else addEvent(current,'added',{proceedingDate:current.proceedingDate,nextDate:current.nextDate,notes:current.notes});
+       out.push(current);
+     });
+     // A removed row is never erased: it becomes a cancelled entry with its full prior dates intact.
+     oldList.forEach(p=>{const pid=String(normalizeProceeding(p).proceedingId);if(kept.has(pid))return;const retained=clone(p);if(retained.status!=='cancelled'){addEvent(retained,'cancelled',{previous:{proceedingDate:retained.proceedingDate||'',nextDate:retained.nextDate||'',notes:retained.notes||''},reason:'Removed from editable list; retained for history'});retained.status='cancelled';}out.push(retained);});
+     return out;
+   };
+ }
+
+ // Conflict guard: if another tab/device sync changes a case while it is being edited, don't silently overwrite it.
+ const fileForm=$('newFileForm');
+ if(fileForm){fileForm.addEventListener('submit',function(e){
+   if(!editingRecordId)return;
+   const key=String(editingRecordId),base=baselineByRecord.get(key),current=allRecords().find(r=>String(r.recordId)===key);
+   if(!base||!current)return;
+   if(String(current.updatedAt||'')!==String(base.updatedAt||'')){
+     e.preventDefault();e.stopImmediatePropagation();
+     try{localStorage.setItem('mact_conflict_draft_v1',JSON.stringify({recordId:key,savedAt:now(),fields:Object.fromEntries(getAllFieldIds().map(fid=>[fid,$(fid)?.value??''])),proceedings:typeof getProceedingsFromForm==='function'?getProceedingsFromForm():[]}));}catch(_){ }
+     alert('CONFLICT DETECTED: इस केस में एडिट करते समय किसी दूसरे टैब/डिवाइस से बदलाव हुआ है। आपका फॉर्म सुरक्षित रखा गया है, लेकिन इसे पुराने डेटा पर सेव नहीं किया गया। केस को बंद करके फिर से खोलें, दोनों बदलाव जाँचें और दोबारा सेव करें।');
+   }
+ },true);
+ // Record-level version snapshots: preserve key prior fields before a case edit is committed.
+ fileForm.addEventListener('submit',function(){if(!editingRecordId)return;const old=allRecords().find(r=>String(r.recordId)===String(editingRecordId));if(!old)return;window.__mactPendingRecordVersion={recordId:String(old.recordId),updatedAt:String(old.updatedAt||''),snapshot:{fields:{caseTitle:old.caseTitle||'',mactNo:old.mactNo||'',claimantName:old.claimantName||'',courtName:old.courtName||'',finalStatus:old.finalStatus||'',vehicleNo:old.vehicleNo||'',insuranceCo:old.insuranceCo||'',fileNumber:old.fileNumber||''},proceedings:clone(old.proceedings||[]),recordHistory:clone(old.recordHistory||[]),capturedAt:now()}};},true);
+ fileForm.addEventListener('submit',function(){const pending=window.__mactPendingRecordVersion;if(!pending)return;setTimeout(()=>{const latest=allRecords().find(r=>String(r.recordId)===pending.recordId);if(!latest||String(latest.updatedAt||'')===pending.updatedAt){window.__mactPendingRecordVersion=null;return;}latest.recordHistory=Array.isArray(latest.recordHistory)?latest.recordHistory:pending.snapshot.recordHistory||[];latest.recordHistory.push({versionId:id(),changedAt:now(),previousUpdatedAt:pending.updatedAt,fields:pending.snapshot.fields,proceedings:pending.snapshot.proceedings});window.__mactPendingRecordVersion=null;window.MACT?.saveLocal?.();window.queueTrueAutoSync?.();renderHistory();},0);},false);
+ fileForm.addEventListener('submit',function(e){
+   const rows=[...document.querySelectorAll('#proceedingsContainer .proceeding[data-row]')];
+   const old=editingRecordId?allRecords().find(r=>String(r.recordId)===String(editingRecordId)):null;const oldById=new Map((old?.proceedings||[]).map(p=>[String(p.proceedingId||''),p]));
+   const seen=new Map();let duplicate='';
+   rows.forEach(row=>{const d=row.querySelector('.p-next')?.value||'';if(!d)return;if(seen.has(d)){const other=seen.get(d);const unchanged=(rr)=>{const p=oldById.get(String(rr.dataset.proceedingId||''));return !!p&&String(p.nextDate||'')===d};if(!unchanged(row)||!unchanged(other))duplicate=d;}else seen.set(d,row)});
+   if(duplicate){e.preventDefault();e.stopImmediatePropagation();alert('Duplicate Hearing Date: '+dateLabel(duplicate)+' इस केस में नई/बदली हुई तारीख के रूप में दोहराई जा रही है। पुरानी समान एंट्री सुरक्षित है; नई तारीख जाँचकर सेव करें।');}
+ },true);}
+
+ // Add hearing modal: reject an exact duplicate date for the same case before the original save handler runs.
+ const addDateForm=$('addDateForm');
+ if(addDateForm)addDateForm.addEventListener('submit',function(e){
+   const rid=$('hearingRecordSelect')?.value,date=$('newNextDate')?.value||'';const r=allRecords().find(x=>String(x.recordId)===String(rid));if(!r||!date)return;
+   const duplicate=(r.proceedings||[]).some(p=>p.status!=='cancelled'&&String(p.nextDate||'')===date);
+   if(duplicate){e.preventDefault();e.stopImmediatePropagation();alert('यह तारीख इस केस में पहले से दर्ज है: '+dateLabel(date)+'. पुरानी एंट्री सुरक्षित है; कृपया अलग तारीख चुनें।');return;}
+   setTimeout(()=>{const latest=allRecords().find(x=>String(x.recordId)===String(rid));const p=[...(latest?.proceedings||[])].reverse().find(x=>String(x.nextDate||'')===String(date));if(p){normalizeProceeding(p);if(!p.history.length)addEvent(p,'added',{proceedingDate:p.proceedingDate||'',nextDate:p.nextDate||'',notes:p.notes||''});window.MACT?.saveLocal?.();renderHistory();}},0);
+ },true);
+
+ // Cancel/delete actions are soft-deletes: retain the proceeding and its original dates.
+ document.addEventListener('click',function(e){const b=e.target.closest('[data-proc-delete]');if(!b)return;e.preventDefault();e.stopImmediatePropagation();const r=allRecords().find(x=>String(x.recordId)===String(currentRecordId||''));const i=Number(b.dataset.procDelete);const p=r?.proceedings?.[i];if(!r||!p)return;if(!confirm('इस Hearing को Cancel करें? पुरानी तारीख History में सुरक्षित रहेगी।'))return;normalizeProceeding(p);if(p.status!=='cancelled'){addEvent(p,'cancelled',{previous:{proceedingDate:p.proceedingDate||'',nextDate:p.nextDate||'',notes:p.notes||''},reason:'Cancelled by user'});p.status='cancelled';r.updatedAt=now();window.MACT?.saveLocal?.();window.MACT?.renderAll?.();window.queueTrueAutoSync?.();if(typeof openDetail==='function')openDetail(r.recordId);renderHistory();if(typeof toast==='function')toast('Hearing cancelled; history retained.');}},true);
+ if(typeof getAllHearings==='function'){getAllHearings=function(){const list=[];allRecords().filter(active).forEach(r=>(r.proceedings||[]).forEach(p=>{if(p.status!=='cancelled'&&p.nextDate)list.push({record:r,date:p.nextDate,notes:p.notes||''});}));return list.sort((a,b)=>a.date.localeCompare(b.date));};}
+
+ // Safely edit a proceeding without replacing its history.
+ const editProcForm=$('proceedingEditForm');
+ if(editProcForm)editProcForm.addEventListener('submit',function(e){
+   e.preventDefault();e.stopImmediatePropagation();
+   const index=Number($('editingProceedingIndex')?.value),r=allRecords().find(x=>String(x.recordId)===String(window.__mactSelectedProceedingRecordId||window.__mactCurrentDetailRecordId||window.MACT?.currentRecordId||''))||allRecords().find(x=>String(x.recordId)===String(currentRecordId||''));
+   // The existing editor stores the selected case in its closure; currentRecordId is the app's selected detail record.
+   if(!r||!Array.isArray(r.proceedings)||!r.proceedings[index]){alert('Case record नहीं मिला। केस को फिर से खोलकर Hearing edit करें।');return;}
+   const p=normalizeProceeding(r.proceedings[index]);const old={proceedingDate:p.proceedingDate||'',nextDate:p.nextDate||'',notes:p.notes||''};
+   const next={proceedingDate:$('editPDate')?.value||'',nextDate:$('editPNext')?.value||'',notes:$('editPNotes')?.value?.trim()||''};
+   if(next.nextDate&&next.nextDate!==old.nextDate&&(r.proceedings||[]).some((x,i)=>i!==index&&x.status!=='cancelled'&&String(x.nextDate||'')===next.nextDate)){alert('यह Next Hearing Date इसी केस में पहले से मौजूद है: '+dateLabel(next.nextDate));return;}
+   if(['proceedingDate','nextDate','notes'].some(k=>old[k]!==next[k])){addEvent(p,'edited',{previous:old,reason:'Edited in Hearing editor'});Object.assign(p,next);p.status='scheduled';r.proceedings[index]=p;r.updatedAt=now();window.MACT?.saveLocal?.();window.MACT?.renderAll?.();window.queueTrueAutoSync?.();}
+   if(typeof closeModal==='function')closeModal('proceedingEditModal');if(typeof openDetail==='function')openDetail(r.recordId);if(typeof toast==='function')toast('Hearing updated. Previous date is preserved in Hearing History.');
+ },true);
+
+ // Safer import/restore: merge missing cases and proceedings, never Object.assign over an existing case.
+ function mergeProceedings(existing,incoming){
+   const out=(Array.isArray(existing)?clone(existing):[]).map(normalizeProceeding);const byId=new Map(out.map(p=>[String(p.proceedingId),p]));
+   (Array.isArray(incoming)?incoming:[]).forEach(raw=>{const p=normalizeProceeding(clone(raw));const prior=byId.get(String(p.proceedingId));if(!prior){const sameDate=out.find(x=>x.status!=='cancelled'&&p.status!=='cancelled'&&x.nextDate&&x.nextDate===p.nextDate);if(sameDate){sameDate.history=Array.isArray(sameDate.history)?sameDate.history:[];(p.history||[]).forEach(h=>{if(!sameDate.history.some(z=>z.eventId&&z.eventId===h.eventId))sameDate.history.push(h)});addEvent(sameDate,'import-conflict',{incomingProceedingId:p.proceedingId,nextDate:p.nextDate,reason:'Imported entry had same next date'});}else{out.push(p);byId.set(String(p.proceedingId),p);}return;}
+     const h=Array.isArray(prior.history)?prior.history:[]; (p.history||[]).forEach(ev=>{if(!h.some(z=>z.eventId&&z.eventId===ev.eventId))h.push(ev)});prior.history=h;
+   });return out;
+ }
+ function mergeImportedRecords(incoming){let added=0,conflicts=0,proceedingsAdded=0;const rs=allRecords();const map=new Map(rs.map(r=>[String(r.recordId),r]));(incoming||[]).forEach(raw=>{if(!raw||typeof raw!=='object')return;const item=clone(raw);item.recordId=item.recordId||id();item.proceedings=Array.isArray(item.proceedings)?item.proceedings:[];const existing=map.get(String(item.recordId));if(!existing){item.proceedings=item.proceedings.map(normalizeProceeding);item.createdAt=item.createdAt||now();item.updatedAt=item.updatedAt||now();rs.push(item);map.set(String(item.recordId),item);added++;return;}const before=(existing.proceedings||[]).length;existing.proceedings=mergeProceedings(existing.proceedings,item.proceedings);proceedingsAdded+=Math.max(0,existing.proceedings.length-before);conflicts++;});window.MACT?.saveLocal?.();window.MACT?.renderAll?.();window.queueTrueAutoSync?.();return {added,conflicts,proceedingsAdded};}
+ const restoreBtn=$('restoreJsonBtn');
+ if(restoreBtn)document.addEventListener('click',function(e){if(e.target.closest('#restoreJsonBtn')!==restoreBtn)return;e.preventDefault();e.stopImmediatePropagation();const file=$('restoreJsonInput')?.files?.[0];if(!file){alert('पहले JSON backup चुनें।');return;}if(!confirm('Safe Merge करें? पुराने केस रिकॉर्ड overwrite नहीं होंगे। नई केस फाइलें और missing hearing history जोड़ी जाएगी।'))return;const reader=new FileReader();reader.onload=()=>{try{const p=JSON.parse(reader.result);if(!Array.isArray(p.records))throw new Error('Invalid backup');const res=mergeImportedRecords(p.records);if(Array.isArray(p.audit)){try{const key='mact_audit_v1',old=JSON.parse(localStorage.getItem(key)||'[]');localStorage.setItem(key,JSON.stringify([...old,...p.audit.filter(x=>!old.some(y=>JSON.stringify(y)===JSON.stringify(x)))]));}catch(_){}}alert(`Safe merge पूरा हुआ। नए केस: ${res.added}; पहले से मौजूद केस जिनकी history जाँची गई: ${res.conflicts}; जोड़ी गई hearing entries: ${res.proceedingsAdded}. मौजूदा केस फ़ील्ड overwrite नहीं किए गए।`);}catch(err){alert('Backup पढ़ा नहीं जा सका: '+err.message);}};reader.readAsText(file);},true);
+ const csvInput=$('importCsvInput');
+ if(csvInput){csvInput.onchange=null;csvInput.addEventListener('change',function(e){const file=e.target.files?.[0];if(!file)return;e.stopImmediatePropagation();const reader=new FileReader();reader.onload=()=>{try{if(typeof parseCSV!=='function')throw new Error('CSV parser unavailable');const rows=parseCSV(reader.result);if(rows.length<2)throw new Error('CSV में डेटा नहीं है');const headers=rows[0].map(x=>String(x).trim().replace(/^\ufeff/,''));const incoming=[];for(let i=1;i<rows.length;i++){if(!rows[i].length)continue;const obj={};headers.forEach((h,j)=>obj[h]=rows[i][j]??'');obj.recordId=obj.recordId||id();try{obj.proceedings=typeof obj.proceedings==='string'?JSON.parse(obj.proceedings):obj.proceedings||[]}catch(_){obj.proceedings=[]}incoming.push(obj)}const res=mergeImportedRecords(incoming);alert(`CSV Safe Import पूरा हुआ। नए केस: ${res.added}; मौजूदा केस: ${res.conflicts}; जोड़ी गई hearing entries: ${res.proceedingsAdded}. मौजूदा केस फ़ील्ड overwrite नहीं किए गए।`);}catch(err){alert('CSV import असफल: '+err.message);}finally{e.target.value='';}};reader.readAsText(file);},true);}
+
+ // Dedicated Hearing History page. Existing cloud-sync controls are not modified.
+ function ensureHistoryPage(){
+   if($('mact-page-hearing-history'))return;
+   const main=document.querySelector('.mact-main');if(!main)return;
+   const page=document.createElement('section');page.id='mact-page-hearing-history';page.className='mact-page-card mact-route-panel';page.dataset.mactPage='hearing-history';
+   page.innerHTML=`<div class="mact-page-heading"><div><h2>🕘 Hearing History & Conflict Review</h2><p>हर केस की पुरानी/नई तारीख, edit, cancellation और imported conflict का सुरक्षित इतिहास।</p></div><button type="button" class="btn btn-light" id="mactHistoryBack">← Back</button></div><div class="mact-history-toolbar"><input id="mactHistorySearch" placeholder="Search case title, MACT no. or claimant…"><select id="mactHistoryType"><option value="">All history events</option><option value="edited">Date / details edited</option><option value="cancelled">Cancelled</option><option value="added">Added</option><option value="import-conflict">Import conflict</option><option value="case-version">Case record versions</option></select><button class="btn btn-light" type="button" id="mactHistoryRefresh">↻ Refresh history</button></div><div id="mactHistoryResults"></div>`;
+   const before=$('newFileModal');main.insertBefore(page,before||null);
+ }
+ function renderHistory(){const box=$('mactHistoryResults');if(!box)return;const q=($('mactHistorySearch')?.value||'').toLowerCase().trim(),type=$('mactHistoryType')?.value||'';const rows=[];allRecords().filter(active).forEach(r=>{(r.proceedings||[]).forEach(p=>{normalizeProceeding(p);(p.history||[]).forEach(h=>{rows.push({r,p,h})});if(!p.history.length&&p.status==='cancelled')rows.push({r,p,h:{action:'cancelled',at:r.updatedAt||'',details:{nextDate:p.nextDate,reason:'Cancelled entry retained'}}});});(r.recordHistory||[]).forEach((v,i)=>rows.push({r,p:null,h:{action:'case-version',at:v.changedAt||'',details:{reason:'Previous case record version',previous:v.fields||{},versionIndex:i}}}));});const filtered=rows.filter(x=>{const hay=[x.r.caseTitle,x.r.claimantName,x.r.mactNo,x.r.fileNumber].join(' ').toLowerCase();return(!q||hay.includes(q))&&(!type||x.h.action===type)}).sort((a,b)=>String(b.h.at||'').localeCompare(String(a.h.at||'')));if(!filtered.length){box.innerHTML='<div class="mact-history-empty">अभी इस फ़िल्टर के लिए कोई Hearing History उपलब्ध नहीं है। आगे किए गए बदलाव यहाँ दर्ज होंगे।</div>';return;}box.innerHTML=filtered.map(x=>{const d=x.h.details||{};const prev=d.previous||{};return `<article class="mact-history-item"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><strong>${esc(x.r.caseTitle||x.r.claimantName||'Untitled Case')}</strong><span class="mact-safety-badge">${esc(x.h.action||'history')}</span></div><div class="meta">MACT: ${esc(x.r.mactNo||'—')} • Claimant: ${esc(x.r.claimantName||'—')} • Event time: ${esc(x.h.at||'—')}<br>Previous hearing date: ${esc(dateLabel(prev.nextDate||d.nextDate||''))} • Previous proceeding date: ${esc(dateLabel(prev.proceedingDate||''))}${d.reason?' • Reason: '+esc(d.reason):''}</div><div style="margin-top:7px;font-size:12px">${esc(x.h.action==='edited'?'Date/details updated':x.h.action==='cancelled'?'Hearing cancelled':x.h.action==='added'?'Hearing added':x.h.action==='import-conflict'?'Duplicate/conflicting imported hearing detected':x.h.action||'History event')} ${d.nextDate?' — '+esc(dateLabel(d.nextDate)):''}</div>${x.h.action==='case-version'?`<button type="button" class="btn btn-warning btn-sm" style="margin-top:8px" data-version-restore="${esc(x.r.recordId)}" data-version-index="${esc(d.versionIndex)}">Restore previous fields</button>`:''}<button type="button" class="btn btn-light btn-sm" style="margin-top:8px" data-history-case="${esc(x.r.recordId)}">Open Case</button></article>`}).join('');}
+ function goHistory(){document.querySelectorAll('.mact-route-panel').forEach(el=>el.classList.remove('mact-route-active'));const p=$('mact-page-hearing-history');if(p)p.classList.add('mact-route-active');document.body.dataset.mactPage='hearing-history';document.querySelectorAll('.mact-nav button').forEach(b=>b.classList.toggle('active',b.dataset.mactHistoryNav==='1'));window.scrollTo({top:0,behavior:'smooth'});try{history.replaceState(null,'','#hearing-history')}catch(_){}renderHistory();}
+ function setupHistory(){ensureHistoryPage();const nav=document.querySelector('.mact-nav');if(nav&&!nav.querySelector('[data-mact-history-nav]')){const b=document.createElement('button');b.type='button';b.dataset.mactHistoryNav='1';b.innerHTML='<span class="ico">↶</span>Hearing History';b.onclick=goHistory;const hearings=[...nav.querySelectorAll('button')].find(x=>/hearings/i.test(x.textContent));if(hearings)hearings.insertAdjacentElement('afterend',b);else nav.appendChild(b);} $('mactHistoryBack')?.addEventListener('click',()=>window.mactGo?.('hearings'));$('mactHistoryRefresh')?.addEventListener('click',renderHistory);$('mactHistorySearch')?.addEventListener('input',renderHistory);$('mactHistoryType')?.addEventListener('change',renderHistory);document.addEventListener('click',e=>{const v=e.target.closest('[data-version-restore]');if(v){const r=allRecords().find(x=>String(x.recordId)===String(v.dataset.versionRestore)),idx=Number(v.dataset.versionIndex),ver=r?.recordHistory?.[idx];if(!r||!ver)return;if(!confirm('इस पुराने संस्करण के चुने गए केस फ़ील्ड वापस लागू करें? मौजूदा संस्करण History में सुरक्षित रहेगा।'))return;const fields=ver.fields||{};['caseTitle','mactNo','claimantName','courtName','finalStatus','vehicleNo','insuranceCo','fileNumber'].forEach(k=>{if(Object.prototype.hasOwnProperty.call(fields,k))r[k]=fields[k]});r.updatedAt=now();r.recordHistory=Array.isArray(r.recordHistory)?r.recordHistory:[];r.recordHistory.push({versionId:id(),changedAt:now(),previousUpdatedAt:ver.previousUpdatedAt||'',fields:{caseTitle:r.caseTitle||'',mactNo:r.mactNo||'',claimantName:r.claimantName||'',courtName:r.courtName||'',finalStatus:r.finalStatus||'',vehicleNo:r.vehicleNo||'',insuranceCo:r.insuranceCo||'',fileNumber:r.fileNumber||''},proceedings:clone(r.proceedings||[]),reason:'Restored an earlier case-field version'});window.MACT?.saveLocal?.();window.MACT?.renderAll?.();window.queueTrueAutoSync?.();renderHistory();alert('पुराने केस फ़ील्ड restore हो गए। Hearing records नहीं बदले गए।');return;}const b=e.target.closest('[data-history-case]');if(!b)return;const r=allRecords().find(x=>String(x.recordId)===String(b.dataset.historyCase));if(r&&typeof openDetail==='function'){window.mactGo?.('cases');setTimeout(()=>openDetail(r.recordId),80);}});const old=window.mactGo;if(typeof old==='function'&&!old.__historyWrapped){const wrapped=function(id){if(String(id)==='hearing-history'){goHistory();return;}return old.apply(this,arguments)};wrapped.__historyWrapped=true;window.mactGo=wrapped;}const pageBtn=document.createElement('button');pageBtn.type='button';pageBtn.className='btn btn-light btn-sm';pageBtn.textContent='🕘 Hearing History';pageBtn.style.margin='0 0 10px';pageBtn.onclick=goHistory;const hearingPage=$('mact-page-hearings')||$('hearingList')?.closest('.card');if(hearingPage&&!hearingPage.querySelector('[data-history-page-shortcut]')){pageBtn.dataset.historyPageShortcut='1';hearingPage.insertBefore(pageBtn,hearingPage.firstChild);} }
+
+ document.addEventListener('DOMContentLoaded',()=>{initializeHistoryFields();setupHistory();setTimeout(()=>{initializeHistoryFields();renderHistory();},700);},{once:true});
+ window.addEventListener('storage',e=>{if(e.key==='mact_unlimited_records'){const local=allRecords();const incoming=(()=>{try{return JSON.parse(e.newValue||'[]')}catch(_){return[]}})();if(incoming.length&&local.length){const changed=incoming.some(n=>{const old=local.find(r=>String(r.recordId)===String(n.recordId));return old&&String(old.updatedAt||'')!==String(n.updatedAt||'')});if(changed&&editingRecordId){alert('दूसरे टैब में केस डेटा बदला है। सेव करने से पहले केस दोबारा खोलकर बदलाव मिलाएँ।');}}}});
+})();
+</script>
+
+
+<!-- HEARING VISIBILITY + OVERDUE PENDING DATES PATCH: does not alter Google Drive sync code -->
+<style id="mact-hearing-visibility-css">
+#mact-page-hearings #hearingList,#mact-page-hearings #overdueHearingList{max-height:none!important;overflow:visible!important}
+.mact-hearing-result{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border-bottom:1px solid var(--office-line);background:var(--office-card);border-radius:10px;margin:7px 0;flex-wrap:wrap}
+.mact-hearing-result .case-info{min-width:190px;flex:1}.mact-hearing-result .case-info strong{display:block;font-size:12px;color:var(--office-text)}.mact-hearing-result .case-info small{display:block;color:var(--office-muted);font-size:10px;margin-top:4px;line-height:1.5}
+.mact-hearing-result .date-tag{font-weight:800;font-size:11px;border-radius:8px;padding:7px 9px;background:#eff6ff;color:#1d4ed8;white-space:nowrap}.mact-hearing-result.overdue .date-tag{background:#fee2e2;color:#b91c1c}.mact-hearing-result .hearing-actions{display:flex;gap:6px;flex-wrap:wrap}
+@media(max-width:600px){.mact-hearing-result{align-items:flex-start}.mact-hearing-result .hearing-actions{width:100%}.mact-hearing-result .hearing-actions button{flex:1}}
+</style>
+<script id="mact-hearing-visibility-engine">
+(function(){
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ const escH=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const todayISO=()=>typeof window.localDate==='function'?window.localDate():new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0')+'-'+String(new Date().getDate()).padStart(2,'0');
+ const activeRecords=()=>{const a=Array.isArray(window.MACT?.records)?window.MACT.records:(Array.isArray(window.records)?window.records:[]);return a.filter(r=>r&&!r.deleted&&!r.deletedAt)};
+ function dateText(d){if(!d)return '—';if(typeof window.formatDate==='function'){try{return window.formatDate(d)}catch(_){}}if(typeof window.dateLabel==='function'){try{return window.dateLabel(d)}catch(_){}}const m=String(d).match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?m[3]+'-'+m[2]+'-'+m[1]:String(d)}
+ function currentHearingFor(r){
+   const ps=Array.isArray(r.proceedings)?r.proceedings:[];
+   // The last non-empty next-date entry is the current date; earlier entries are historical hearings.
+   // If the last dated entry was cancelled, do not resurrect an older date as the current date.
+   for(let i=ps.length-1;i>=0;i--){const p=ps[i];if(p&&String(p.nextDate||'').trim()){if(p.status==='cancelled')return null;return {record:r,date:String(p.nextDate).slice(0,10),notes:p.notes||'',proceedingId:p.proceedingId||'',index:i};}}
+   const fallback=String(r.nextDate||r.nextHearingDate||'').slice(0,10);
+   if(fallback)return {record:r,date:fallback,notes:r.hearingNotes||'',proceedingId:'',index:-1};
+   return null;
+ }
+ function allCurrent(){return activeRecords().map(currentHearingFor).filter(x=>x&&/^\d{4}-\d{2}-\d{2}$/.test(x.date)).sort((a,b)=>a.date.localeCompare(b.date));}
+ // Override the prior list builder so historical proceeding dates are not mistakenly treated as current hearings.
+ window.getAllHearings=function(){return allCurrent().map(x=>({record:x.record,date:x.date,notes:x.notes,proceedingId:x.proceedingId}));};
+ function row(x,overdue){const r=x.record;const title=r.caseTitle||r.claimantName||'Untitled Case';const claimant=r.claimantName||'';const mact=r.mactNo||r.fileNumber||r.recordId||'';return `<div class="mact-hearing-result ${overdue?'overdue':''}"><div class="case-info"><strong>${escH(title)}</strong><small>${claimant?'Claimant: '+escH(claimant)+' • ':''}${mact?'MACT/File: '+escH(mact):''}${x.notes?' • '+escH(x.notes):''}</small></div><span class="date-tag">${overdue?'OVERDUE':' '+(x.date===todayISO()?'TODAY':'UPCOMING')} · ${escH(dateText(x.date))}</span><div class="hearing-actions"><button type="button" class="btn btn-light btn-sm" data-open-hearing-case="${escH(r.recordId)}">Open Case / Update Date</button></div></div>`;}
+ function render(){
+   const list=$('hearingList'),lateBox=$('overdueHearingList');if(!list&&!lateBox)return;
+   const today=todayISO(),all=allCurrent(),future=all.filter(x=>x.date>=today),late=all.filter(x=>x.date<today);
+   const todayN=future.filter(x=>x.date===today).length;
+   if($('todayCount'))$('todayCount').textContent=String(todayN);
+   if($('overdueHearingCount'))$('overdueHearingCount').textContent=String(late.length);
+   const badge=$('headerTodayBadge');if(badge){badge.style.display=todayN?'inline-block':'none';if(todayN)badge.textContent='Today: '+todayN+' hearing'+(todayN===1?'':'s');}
+   if(list)list.innerHTML=future.length?future.map(x=>row(x,false)).join(''):`<div class="empty-state" style="padding:18px;text-align:center"><div class="icon">📅</div>No today or upcoming hearings recorded.<br><button type="button" class="btn btn-warning btn-sm" style="margin-top:8px" onclick="document.getElementById('topAddDateBtn')?.click()">＋ Add Hearing</button></div>`;
+   if(lateBox)lateBox.innerHTML=late.length?late.map(x=>row(x,true)).join(''):`<div class="empty-state" style="padding:12px;text-align:center;color:var(--office-muted)">✅ कोई ऐसी Pending Date नहीं है जिसकी तारीख निकल गई हो और अगली तारीख अपडेट न हुई हो।</div>`;
+   const dash=$('dashToday');if(dash)dash.textContent=String(todayN);
+ }
+ window.mactRefreshHearingViews=render;
+ document.addEventListener('click',e=>{const b=e.target.closest('[data-open-hearing-case]');if(!b)return;const rid=b.getAttribute('data-open-hearing-case');const r=activeRecords().find(x=>String(x.recordId)===String(rid));if(!r)return;if(typeof window.mactGo==='function')window.mactGo('cases');setTimeout(()=>{if(typeof window.openDetail==='function')window.openDetail(rid);else if(typeof window.openRecordDetail==='function')window.openRecordDetail(rid);},80);});
+ document.addEventListener('DOMContentLoaded',()=>{render();setTimeout(render,400);setTimeout(render,1200);setInterval(render,2500);},{once:true});
+ // Refresh after normal save/render actions, and when another browser tab updates the shared local copy.
+ const oldRender=window.MACT?.renderAll;if(typeof oldRender==='function'&&!oldRender.__hearingRefreshWrapped){const wrapped=function(){const out=oldRender.apply(this,arguments);setTimeout(render,0);return out};wrapped.__hearingRefreshWrapped=true;window.MACT.renderAll=wrapped;}
+ window.addEventListener('storage',e=>{if(!e.key||/mact|record|firebase/i.test(e.key))setTimeout(render,150)});
+})();
+</script>
+
+<!-- FRONT-END ADVANCED LEGAL CRM ADD-ON (Apps Script / Cloud Sync code intentionally untouched) -->
+<style id="mact-front-advanced-css">
+#mactAdvFab{position:fixed;right:18px;bottom:18px;z-index:9990;background:#0b2348;color:#fff;border:1px solid #c9a227;border-radius:999px;padding:13px 17px;font-weight:800;box-shadow:0 8px 28px #0b234833;cursor:pointer}
+#mactAdvPanel{display:none;position:fixed;inset:0;z-index:9991;background:#08162bb8;backdrop-filter:blur(4px);padding:12px;align-items:center;justify-content:center}
+#mactAdvPanel.open{display:flex}
+#mactAdvBox{background:#f6f8fc;color:#14213d;width:min(1100px,100%);max-height:94vh;overflow:auto;border-radius:18px;box-shadow:0 25px 90px #0005}
+#mactAdvBox .madv-head{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:16px 20px;background:#0b2348;color:#fff}
+#mactAdvBox .madv-head h2{margin:0;font-size:19px;color:#fff}
+#mactAdvBox .madv-body{padding:16px}
+#mactAdvBox .madv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+#mactAdvBox .madv-card{background:#fff;border:1px solid #dce4ef;border-radius:13px;padding:14px;box-shadow:0 4px 15px #15284a0b}
+#mactAdvBox .madv-card h3{margin:0 0 10px;color:#123b78;font-size:15px}
+#mactAdvBox .madv-card p,#mactAdvBox .madv-help{font-size:12px;line-height:1.5;color:#64748b}
+#mactAdvBox .madv-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:7px 0}
+#mactAdvBox input,#mactAdvBox select,#mactAdvBox textarea{width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;background:white}
+#mactAdvBox label{display:block;font-size:11px;font-weight:700;color:#475569;margin:7px 0 4px}
+#mactAdvBox .madv-btn{border:0;border-radius:8px;padding:9px 12px;background:#123b78;color:white;font-weight:700;cursor:pointer}
+#mactAdvBox .madv-btn.alt{background:#e2e8f0;color:#1e293b}
+#mactAdvBox .madv-btn.green{background:#15803d}
+#mactAdvBox .madv-btn.red{background:#b91c1c}
+#mactAdvBox .madv-result{padding:10px;border-radius:8px;background:#eff6ff;border:1px solid #bfdbfe;font-weight:700;margin-top:8px;white-space:pre-wrap}
+#mactAdvBox .madv-list{max-height:220px;overflow:auto;border:1px solid #e2e8f0;border-radius:8px;padding:8px;font-size:12px}
+#mactAdvBox .madv-list-item{padding:8px;border-bottom:1px solid #e2e8f0}
+@media(max-width:650px){#mactAdvFab{right:10px;bottom:10px;padding:11px 13px}#mactAdvPanel{padding:0;align-items:flex-end}#mactAdvBox{max-height:96vh;border-radius:18px 18px 0 0}#mactAdvBox .madv-head{padding:13px}#mactAdvBox .madv-body{padding:10px}}
+</style>
+<button id="mactAdvFab" type="button">⚖️ Advanced CRM Tools</button>
+<div id="mactAdvPanel" aria-hidden="true">
+ <div id="mactAdvBox" role="dialog" aria-modal="true" aria-label="Advanced Legal CRM Tools">
+  <div class="madv-head"><div><h2>⚖️ Advanced Legal CRM Tools</h2><div style="font-size:11px;color:#dbeafe;margin-top:4px">Front-end add-ons • Existing Cloud Sync configuration untouched</div></div><button id="mactAdvClose" class="madv-btn alt" type="button">✕ Close</button></div>
+  <div class="madv-body"><div class="madv-grid">
+   <section class="madv-card"><h3>🔔 Hearing Reminders</h3><p>Browser notification reminders for today's and upcoming hearing dates. This page/browser must be allowed to send notifications; this does not send email or server-side reminders.</p><button class="madv-btn" id="madvEnableNotify" type="button">Enable Browser Notifications</button><button class="madv-btn alt" id="madvCheckReminders" type="button">Check Hearings Now</button><div class="madv-result" id="madvReminderResult">Reminders not checked yet.</div></section>
+   <section class="madv-card"><h3>👥 User Role Profile</h3><p>Choose a working profile for this browser. This is a local UI preference only, not secure authorization; server-side enforcement requires Apps Script changes, which are intentionally excluded.</p><label>Current profile</label><select id="madvRole"><option>Admin</option><option>Data Entry</option><option>Hearing User</option><option>Viewer</option></select><button class="madv-btn" id="madvSaveRole" type="button">Save Profile</button><div class="madv-result" id="madvRoleResult">Profile applies only to these additional tools.</div></section>
+   <section class="madv-card"><h3>💾 Backup & Recovery</h3><p>Export records to a local JSON backup or restore from a previously exported backup. Import can merge records or replace the local working set. Review carefully before replacing. Existing cloud sync code is not changed.</p><div class="madv-row"><button class="madv-btn green" id="madvExportBackup" type="button">Download JSON Backup</button></div><label>Choose backup file</label><input id="madvImportFile" type="file" accept=".json,application/json"><label>Restore mode</label><select id="madvRestoreMode"><option value="merge">Merge with current records (safer)</option><option value="replace">Replace current local records</option></select><button class="madv-btn" id="madvImportBackup" type="button">Restore Backup</button><div class="madv-result" id="madvBackupResult">Backup not created yet.</div></section>
+   <section class="madv-card"><h3>⚖️ MACT Compensation Estimator</h3><p>Indicative worksheet only. Enter/verify the multiplier, future prospects and deduction applicable to the case. This add-on does not fetch wage tables or automatically certify legal amounts.</p><div class="madv-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:8px"><div><label>Monthly income (₹)</label><input id="madvIncome" type="number" min="0" value="15000"></div><div><label>Age (years)</label><input id="madvAge" type="number" min="0" max="120" value="35"></div><div><label>Multiplier (verify)</label><input id="madvMultiplier" type="number" min="0" step="0.5" value="16"></div><div><label>Future prospects (%)</label><input id="madvFuture" type="number" min="0" max="200" value="40"></div><div><label>Personal expense deduction (%)</label><input id="madvDeduction" type="number" min="0" max="100" value="33.3333"></div><div><label>Other heads / expenses (₹)</label><input id="madvOther" type="number" min="0" value="0"></div></div><button class="madv-btn" id="madvCalculate" type="button" style="margin-top:10px">Calculate Indicative Estimate</button><div class="madv-result" id="madvCalcResult">Enter details and calculate.</div><p class="madv-help">Formula shown: (monthly income × 12 × (1 + future prospects %) × (1 − personal deduction %) × multiplier) + other heads. For children, non-earners, injury, disability or special circumstances, use the legally applicable method rather than relying on this generic estimate.</p></section>
+   <section class="madv-card"><h3>📊 Quick Reports & Export</h3><p>Download a CSV summary of current records. This export is generated in your browser.</p><button class="madv-btn" id="madvExportCsv" type="button">Export Case Summary CSV</button><div class="madv-result" id="madvReportResult">Records available: —</div></section>
+   <section class="madv-card"><h3>🧾 Local Activity Log</h3><p>Records actions performed by these added tools in this browser. It is not a complete audit trail of edits made elsewhere or by other users.</p><div class="madv-row"><button class="madv-btn alt" id="madvRefreshLog" type="button">Refresh Log</button><button class="madv-btn alt" id="madvExportLog" type="button">Export Log</button></div><div class="madv-list" id="madvLogList">No local tool actions recorded.</div></section>
+  </div></div>
+ </div>
+</div>
+<script id="mact-front-advanced-js">
+(function(){
+ 'use strict';
+ const $=id=>document.getElementById(id), LOGKEY='mact_front_tools_audit_v1', ROLEKEY='mact_front_tools_role_v1';
+ const panel=$('mactAdvPanel');
+ function say(id,msg){const e=$(id);if(e)e.textContent=msg}
+ function records(){try{const r=window.MACT&&window.MACT.records;return Array.isArray(r)?r:[]}catch(e){return []}}
+ function audit(action,detail){try{let a=JSON.parse(localStorage.getItem(LOGKEY)||'[]');a.unshift({at:new Date().toISOString(),action,detail:String(detail||'')});localStorage.setItem(LOGKEY,JSON.stringify(a.slice(0,300)))}catch(e){}}
+ function download(name,content,type){const blob=new Blob([content],{type:type||'application/octet-stream'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500)}
+ function open(){panel.classList.add('open');panel.setAttribute('aria-hidden','false');refreshReports();renderLog()}
+ function close(){panel.classList.remove('open');panel.setAttribute('aria-hidden','true')}
+ $('mactAdvFab').addEventListener('click',open);$('mactAdvClose').addEventListener('click',close);
+ panel.addEventListener('click',e=>{if(e.target===panel)close()});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&panel.classList.contains('open'))close()});
+ function dateFrom(v){if(!v)return '';const d=String(v).slice(0,10);return /^\d{4}-\d{2}-\d{2}$/.test(d)?d:''}
+ function nextDates(r){
+   const out=[];
+   ['nextHearingDate','nextDate','nextDateProtest','hearingDate','dateOfHearing'].forEach(k=>{const d=dateFrom(r&&r[k]);if(d)out.push({date:d,source:k})});
+   const arrays=[r&&r.proceedings,r&&r.hearings,r&&r.hearingHistory,r&&r.proceedingHistory];
+   arrays.forEach(arr=>{if(Array.isArray(arr))arr.forEach(x=>{if(!x||typeof x!=='object')return;const d=dateFrom(x.nextDate||x.nextHearingDate||x.date||x.proceedingDate||x.hearingDate);if(d)out.push({date:d,source:'history'})})});
+   const unique=new Map();out.forEach(x=>{if(!unique.has(x.date))unique.set(x.date,x)});return [...unique.values()];
+ }
+ function checkReminders(){
+   const today=new Date();today.setHours(0,0,0,0);const todayStr=today.toISOString().slice(0,10),rows=[];
+   records().forEach(r=>nextDates(r).forEach(x=>{const d=new Date(x.date+'T00:00:00');const days=Math.round((d-today)/86400000);if(days>=0&&days<=7)rows.push({r,date:x.date,days})}));
+   rows.sort((a,b)=>a.date.localeCompare(b.date));
+   const message=rows.length?rows.map(x=>`${x.days===0?'TODAY':x.days+' day(s)'} — ${x.r.caseTitle||x.r.claimantName||x.r.mactNo||'Case'} — ${x.date}`).join('\n'):'No hearings in the next 7 days were found in recognized date fields.';
+   say('madvReminderResult',message);
+   if('Notification' in window&&Notification.permission==='granted'){
+     const due=rows.filter(x=>x.days===0||x.days===1||x.days===3||x.days===7);
+     if(due.length){const key='mact_notified_'+todayStr;let sent=[];try{sent=JSON.parse(sessionStorage.getItem(key)||'[]')}catch(e){}
+       due.forEach(x=>{const id=String(x.r.recordId||x.r.mactNo||x.r.caseTitle||'')+'|'+x.date;if(sent.includes(id))return;try{new Notification(x.days===0?'MACT Hearing Today':`MACT Hearing in ${x.days} day(s)`,{body:`${x.r.caseTitle||x.r.claimantName||x.r.mactNo||'Case'} • ${x.date}`})}catch(e){}sent.push(id)});try{sessionStorage.setItem(key,JSON.stringify(sent))}catch(e){}
+     }
+   }
+   audit('Reminder check',rows.length+' hearings found');
+ }
+ $('madvEnableNotify').addEventListener('click',async()=>{if(!('Notification'in window)){say('madvReminderResult','This browser does not support desktop notifications.');return}try{const p=await Notification.requestPermission();say('madvReminderResult','Notification permission: '+p+'. Keep this page open to check reminders.');if(p==='granted')checkReminders()}catch(e){say('madvReminderResult','Could not request permission: '+e.message)}});
+ $('madvCheckReminders').addEventListener('click',checkReminders);
+ const savedRole=localStorage.getItem(ROLEKEY)||'Admin';$('madvRole').value=savedRole;
+ $('madvSaveRole').addEventListener('click',()=>{localStorage.setItem(ROLEKEY,$('madvRole').value);say('madvRoleResult','Saved profile: '+$('madvRole').value+'. This is a local preference, not account-level security.');audit('Role profile changed',$('madvRole').value)});
+ $('madvExportBackup').addEventListener('click',()=>{const payload={app:'MACT Legal Portal front-end backup',schemaVersion:1,exportedAt:new Date().toISOString(),records:records()};download('MACT_Legal_Portal_Backup_'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(payload,null,2),'application/json');localStorage.setItem('mact_last_front_backup',new Date().toISOString());say('madvBackupResult','Backup downloaded. Records included: '+payload.records.length+'. Store the file securely.');audit('JSON backup exported',payload.records.length+' records')});
+ $('madvImportBackup').addEventListener('click',async()=>{const file=$('madvImportFile').files[0];if(!file){say('madvBackupResult','Please choose a JSON backup file first.');return}let data;try{data=JSON.parse(await file.text())}catch(e){say('madvBackupResult','Invalid JSON backup file. Nothing changed.');return}
+   const incoming=Array.isArray(data)?data:(Array.isArray(data.records)?data.records:null);if(!incoming){say('madvBackupResult','Backup does not contain a records array. Nothing changed.');return}
+   const current=records();let result=[];
+   if($('madvRestoreMode').value==='replace'){if(!confirm('Replace the current browser record set with '+incoming.length+' backup records? Export a backup first.'))return;result=incoming}
+   else {const map=new Map();current.forEach((r,i)=>map.set(String(r.recordId||r.id||r.mactNo||r.fileNumber||('current-'+i)),r));incoming.forEach((r,i)=>{const k=String(r.recordId||r.id||r.mactNo||r.fileNumber||('incoming-'+i));if(!map.has(k))map.set(k,r);else if(JSON.stringify(map.get(k))!==JSON.stringify(r)){const nk=k+'-restored-'+i;map.set(nk,Object.assign({},r,{recordId:r.recordId?String(r.recordId)+'-restored-'+i:undefined,restoreConflictWith:k}))}});result=[...map.values()]}
+   try{if(window.MACT&&typeof window.MACT.records!=='undefined'){const live=window.MACT.records;live.splice(0,live.length,...result)}else throw new Error('App record interface unavailable');
+     if(typeof window.MACT.saveLocal==='function')window.MACT.saveLocal();if(typeof window.MACT.renderAll==='function')window.MACT.renderAll();
+     say('madvBackupResult','Restore processed. Records now in local working set: '+result.length+'. Check cloud sync status before using other devices.');audit('JSON backup restored',$('madvRestoreMode').value+'; count='+result.length);
+   }catch(e){say('madvBackupResult','Restore could not complete safely: '+e.message)}
+ });
+ function csvCell(v){return '"'+String(v==null?'':v).replace(/"/g,'""').replace(/\r?\n/g,' ')+'"'}
+ $('madvExportCsv').addEventListener('click',()=>{const rs=records(),cols=['recordId','caseTitle','mactNo','fileNumber','claimantName','mobile','accidentDate','vehicleNo','insuranceCo','courtName','nextHearingDate','nextDate','judgementStatus','importanceLevel'];const csv=[cols.join(','),...rs.map(r=>cols.map(k=>csvCell(r[k])).join(','))].join('\r\n');download('MACT_Case_Summary_'+new Date().toISOString().slice(0,10)+'.csv','\ufeff'+csv,'text/csv;charset=utf-8');say('madvReportResult','CSV exported. Current records: '+rs.length);audit('CSV report exported',rs.length+' records')});
+ $('madvCalculate').addEventListener('click',()=>{const income=Number($('madvIncome').value),age=Number($('madvAge').value),mult=Number($('madvMultiplier').value),future=Number($('madvFuture').value)/100,ded=Number($('madvDeduction').value)/100,other=Number($('madvOther').value);
+   if([income,age,mult,future,ded,other].some(x=>!Number.isFinite(x))||income<0||age<0||mult<0||ded<0||ded>1||future<0||other<0){say('madvCalcResult','Please enter valid non-negative values and a deduction between 0 and 100%.');return}
+   const base=income*12*(1+future)*(1-ded)*mult,total=base+other;const money=n=>'₹'+n.toLocaleString('en-IN',{maximumFractionDigits:2});say('madvCalcResult',`Age entered: ${age} years\nAnnual income: ${money(income*12)}\nFuture prospects: ${future*100}%\nPersonal deduction: ${ded*100}%\nMultiplier used: ${mult} (entered manually)\nMultiplier-based amount: ${money(base)}\nOther heads: ${money(other)}\nIndicative total: ${money(total)}\n\nVerify the applicable legal method and multiplier before relying on this estimate.`);audit('MACT estimate calculated','age='+age+'; multiplier='+mult+'; total='+total)});
+ function refreshReports(){const n=records().length;say('madvReportResult','Records available: '+n);say('madvBackupResult','Current records available for backup: '+n);say('madvRoleResult','Current local profile: '+(localStorage.getItem(ROLEKEY)||'Admin')+'. UI preference only.')}
+ function renderLog(){let a=[];try{a=JSON.parse(localStorage.getItem(LOGKEY)||'[]')}catch(e){}const box=$('madvLogList');if(!box)return;box.innerHTML=a.length?a.slice(0,80).map(x=>`<div class="madv-list-item"><b>${String(x.action||'Action').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}</b><br>${String(x.at||'').replace(/[&<>"]/g,'')}<br>${String(x.detail||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}</div>`).join(''):'No local tool actions recorded.'}
+ $('madvRefreshLog').addEventListener('click',renderLog);$('madvExportLog').addEventListener('click',()=>{let a=[];try{a=JSON.parse(localStorage.getItem(LOGKEY)||'[]')}catch(e){}download('MACT_Local_Tool_Audit.json',JSON.stringify(a,null,2),'application/json')});
+ function refreshHearingInfo(){if(panel.classList.contains('open'))refreshReports()}
+ window.addEventListener('mact-cloud-data',refreshHearingInfo);window.addEventListener('storage',refreshHearingInfo);
+ setInterval(()=>{if(document.visibilityState==='visible'&&('Notification'in window)&&Notification.permission==='granted')checkReminders()},60000);
+ document.addEventListener('DOMContentLoaded',refreshReports,{once:true});
+})();
+</script>
+</body>
 </html>
